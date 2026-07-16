@@ -7,6 +7,7 @@ import os
 from database import engine, get_db, SessionLocal
 import models
 from search import search_direct_cached, search_transfer_cached
+from fastapi.responses import HTMLResponse
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -166,9 +167,10 @@ def calculate_nearest_station(user_lat: float, user_lon: float) -> str:
          return None  
     return best_station
 
-app.get("/")
-async def root():
-    return {"message": "NYC Subway Route API is running. Check /docs for documentation."}
+@app.get("/")
+async def get_index():
+    with open("index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
 
 @app.get("/search_route")
 async def run_search_route(
