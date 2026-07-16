@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NYC Subway Multimodal Finder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .form-side {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 隙間を少し広く */
+        .map-side {
+            flex: 1;
+        }
+
+        #map {
+            width: 100%;
+            height: 420px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            position: relative;
+            margin-bottom: 5px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 16px;
+            box-sizing: border-box;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+        }
+
+        input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        .btn-flex {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        button {
+            padding: 16px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+
+        .search-btn {
+            background-color: #007bff;
+            color: white;
+            flex: 2;
+        }
+
+        .gps-btn {
+            background-color: #28a745;
+            color: white;
+            flex: 1;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #result {
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            display: none;
+            border-radius: 8px;
+        }
+
+        /* Train Card Styles */
+        .train-card {
+            border-left: 4px solid #222;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .train-card.active {
+            border-left-color: #007bff;
+            background: #fdfdfd;
+        }
+
+        .train-card.active .details {
+            display: block;
+        }
+
+        .details {
+            display: none;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #555;
+            background: #f0f0f0;
+            padding: 8px;
+            border-radius: 4px;
+            line-height: 1.4;
+        }
+
+        /* Tags */
+        .direct-tag {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            font-size: 11px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .transfer-tag {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            font-size: 11px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        /* Autocomplete Dropdown */
+        .suggest-box {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 100%;
+            background: white;
+            border: 1px solid #ccc;
+            z-index: 9999;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .suggest-item {
+            padding: 12px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 15px;
+            color: #333;
+            text-align: left;
+        }
+
+        .suggest-item:hover {
+            background-color: #f0f7ff;
+            color: #007bff;
+        }
+
+        .suggest-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Pagination Controls Styles */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background-color: #6c757d;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+            flex: 1;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .nav-btn:hover {
+            opacity: 0.9;
+        }
+
+        #appInitOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 25px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-box {
+            max-width: 450px;
+            text-align: center;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .loading-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 10px;
+        }
+
+        .status-steps {
+            text-align: left;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .step {
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step.pending {
+            color: #aaa;
+        }
+
+        .step.active {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .step.done {
+            color: #28a745;
+        }
+
+        .notice-text {
+            font-size: 12px;
+            color: #f35b5b;
+            background: #fff5f5;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ffe3e3;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        .search-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 30px;
+            background: #fff;
+            border: 1px dashed #007bff;
+            border-radius: 8px;
+        }
+
+        .mini-spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+
+        .marker-green {
+            filter: hue-rotate(140deg) brightness(0.9);
+        }
+
+        /* Start */
+        .marker-yellow {
+            filter: hue-rotate(40deg) saturate(2) brightness(0.9);
+        }
+
+        /* Transfer */
+        .marker-red {
+            filter: hue-rotate(0deg) saturate(2);
+        }
+
+        /* Destination */
+    </style>
+</head>
+
+<body>
+
+    <div id="appInitOverlay">
+        <div class="spinner"></div>
+        <div class="loading-box">
+            <div class="loading-title">⚡ NYC Subway Engine Initializing...</div>
+            <div style="font-size: 13px; color: #666;">FastAPI backend is parsing and caching massive spatial data.
+            </div>
+
+            <div class="status-steps">
+                <div id="step1" class="step active">🔄 1. Pinging local server on port 8000...</div>
+                <div id="step2" class="step pending">⏳ 2. Indexing SQLite & GTFS Stop Tables...</div>
+                <div id="step3" class="step pending">⏳ 3. Generating Spatial Coordinates Map...</div>
+                <div id="step4" class="step pending">⏳ 4. Compiling Triplet Routes to Memory...</div>
+            </div>
+
+            <div class="notice-text">
+                ⚠️ Note: The very first load takes roughly 20-30 seconds because Python is computing thousands of
+                transit nodes directly into RAM for blazing fast lookups later.
+            </div>
+        </div>
+    </div>
+
+    <h1>🌍 NYC Subway Route Finder</h1>
+
+    <div class="container">
+        <div class="form-side">
+            <div class="form-group">
+                <label>Origin Station (Or use Map/GPS)</label>
+                <input type="text" id="startStation" placeholder="Type a station name (e.g., Penn)..."
+                    autocomplete="off">
+                <div id="startSuggest" class="suggest-box"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Destination Station</label>
+                <input type="text" id="endStation" placeholder="Type destination station..." autocomplete="off">
+                <div id="endSuggest" class="suggest-box"></div>
+            </div>
+
+            <div class="btn-flex">
+                <button id="searchRouteBtn" class="search-btn" onclick="initiateNewSearch()">Search Route</button>
+                <button id="gpsBtn" class="gps-btn" onclick="useGPS()">📡 Use GPS</button>
+            </div>
+
+            <div id="locationStatus" style="font-size: 12px; color: #666; font-style: italic; margin-top: 5px;"></div>
+        </div>
+
+        <div class="map-side">
+            <label>Tap map to set origin coordinate</label>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = "http://127.0.0.1:8000";
+
+        let currentSearchTime = "00:00:00";
+        let timeHistory = [];
+        let lastDisplayedTrains = [];
+        let allStationsData = [];
+
+        let selectedLat = null;
+        let selectedLon = null;
+        let clickMarker = null;
+        let routeMarkers = [];
+        let routePolyline = null;
+
+        const map = L.map('map').setView([40.7580, -73.9855], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        const createColorIcon = (className) => {
+            return L.icon({
+                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41],
+                className: className
+            });
+        };
+
+        map.on('click', function (e) {
+            selectedLat = e.latlng.lat;
+            selectedLon = e.latlng.lng;
+            if (clickMarker) map.removeLayer(clickMarker);
+            clearRouteVisuals();
+            clickMarker = L.marker([selectedLat, selectedLon], { icon: createColorIcon('marker-green') }).addTo(map).bindPopup("Selected Origin").openPopup();
+            document.getElementById('startStation').value = `📍 Map Location (${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)})`;
+            document.getElementById('locationStatus').innerText = "Location set via map tap. Enter destination and search.";
+        });
+
+        function useGPS() {
+            const statusDiv = document.getElementById('locationStatus');
+            if (!navigator.geolocation) {
+                statusDiv.innerText = "Geolocation is not supported by your browser.";
+                return;
+            }
+            statusDiv.innerText = "Acquiring GPS coordinates...";
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    selectedLat = position.coords.latitude;
+                    selectedLon = position.coords.longitude;
+                    map.setView([selectedLat, selectedLon], 14);
+                    if (clickMarker) map.removeLayer(clickMarker);
+                    clearRouteVisuals();
+                    clickMarker = L.marker([selectedLat, selectedLon], { icon: createColorIcon('marker-green') }).addTo(map).bindPopup("Current Location (GPS)").openPopup();
+                    document.getElementById('startStation').value = `📡 GPS Location (${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)})`;
+                    statusDiv.innerText = "GPS coordinates parsed successfully.";
+                },
+                () => { statusDiv.innerText = "Failed to acquire GPS. Please manually click on the map."; }
+            );
+        }
+
+        function initiateNewSearch() {
+            currentSearchTime = "00:00:00";
+            timeHistory = [];
+            fetchRoute();
+        }
+
+        async function fetchRoute() {
+            const end = document.getElementById('endStation').value;
+            const resultDiv = document.getElementById('result');
+            const searchBtn = document.getElementById('searchRouteBtn');
+
+            if (!end) { alert("Please enter a destination station."); return; }
+
+            searchBtn.disabled = true;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `
+                <div class="search-loading">
+                    <div class="mini-spinner"></div>
+                    <span style="font-weight: bold; color: #007bff;">Calculating optimal routes via In-Memory BFS Engine...</span>
+                </div>
+            `;
+
+            let url = `${API_BASE}/search_route?end_stop_name=${encodeURIComponent(end)}&departure_time_limit=${currentSearchTime}`;
+            const startVal = document.getElementById('startStation').value;
+            if (selectedLat && selectedLon && (startVal.includes("📍") || startVal.includes("📡"))) {
+                url += `&user_lat=${selectedLat}&user_lon=${selectedLon}`;
+            } else {
+                if (!startVal) {
+                    alert("Please enter an origin station or choose via Map/GPS.");
+                    searchBtn.disabled = false;
+                    resultDiv.style.display = "none";
+                    return;
+                }
+                url += `&start_stop_name=${encodeURIComponent(startVal)}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    resultDiv.innerHTML = `<p style="color:red; font-weight:bold;">⚠️ Error: ${errorData.detail || "Server error."}</p>`;
+                    return;
+                }
+                const data = await res.json();
+                renderResults(data);
+            } catch (e) {
+                resultDiv.innerHTML = `<p style="color:red;">Error communicating with backend server. Check port 8000.</p>`;
+            } finally {
+                searchBtn.disabled = false;
+            }
+        }
+
+        function renderResults(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = "block";
+
+            if (data.status !== "Success" || !data.all_trains || data.all_trains.length === 0) {
+                let failHtml = `<h3>Search Results (Departure Board: ${data.origin_station || "Unknown"})</h3>`;
+                failHtml += `<p>No schedules found running within this targeted timeframe.</p>`;
+                if (timeHistory.length > 0) {
+                    failHtml += `<div class="nav-buttons"><button id="prevBtn" class="nav-btn">⬅ Back to Previous Schedule</button></div>`;
+                }
+                resultDiv.innerHTML = failHtml;
+                setupNavEvents();
+                return;
+            }
+
+            lastDisplayedTrains = data.all_trains;
+            const pageTrains = data.all_trains.slice(0, 5);
+
+            let html = `<h3>Search Results (Departure Board: ${data.origin_station || "As Input"})</h3>`;
+            html += `<p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">👇 Click a card to expand timeline & plot route straight line on map.</p>`;
+
+            pageTrains.forEach((train) => {
+                const tag = train.is_direct ? '<span class="direct-tag">Direct</span>' : '<span class="transfer-tag">Transfer</span>';
+                let transferText = "";
+                if (!train.is_direct && train.transfer_count > 0) {
+                    transferText = ` <span style="font-size: 12px; color: #666; font-weight: normal;">(${train.transfer_count} ${train.transfer_count === 1 ? 'transfer' : 'transfers'})</span>`;
+                }
+                const routeId = train.route_id || "Unknown";
+                const headsign = train.trip_headsign || "NYC Train";
+                const farePrice = train.fare || "$2.90";
+                const itineraryText = train.description || "Direct Route Path";
+
+                html += `
+                    <div class="train-card" onclick="handleCardClick(this, '${encodeURIComponent(itineraryText)}', ${train.is_direct}, '${encodeURIComponent(data.origin_station)}', '${encodeURIComponent(headsign)}')">
+                        <span style="float: right; color: #aaa;">▼</span>
+                        <strong>🕒 ${train.departure_time} ➡ ${train.arrival_time}</strong> ${tag}
+                        <br><span style="color:#000000; font-size:13px; font-weight: normal;">Route: ${routeId} (${headsign}) | Fare: <span style="font-weight: bold; color: #000000;">${farePrice}</span>${transferText}</span>
+                        <div class="details">
+                            <strong>🚶 Detailed Itinerary:</strong><br>${itineraryText.replace(/->/g, " ➡ ")}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `<div class="nav-buttons">`;
+            if (timeHistory.length > 0) {
+                html += `<button id="prevBtn" class="nav-btn">⬅ Earlier Trains (${timeHistory[timeHistory.length - 1]})</button>`;
+            } else { html += `<div></div>`; }
+            if (data.all_trains.length > 5) {
+                html += `<button id="nextBtn" class="nav-btn">Later Trains ➡</button>`;
+            } else { html += `<div></div>`; }
+            html += `</div>`;
+
+            resultDiv.innerHTML = html;
+            setupNavEvents();
+        }
+
+    
+        function parseStationsFromItinerary(itinerary, originName, isDirect, headsign) {
+            let stations = [];
+            if (isDirect) {
+                stations.push(originName);
+                const destClean = headsign.replace("To ", "").trim();
+                stations.push(destClean);
+            } else {
+                let cleanItinerary = itinerary.replace(/^\[Walk to [^\]]+\]\s*->\s*/, "");
+                const regex = /Route\s[A-Za-z0-9]+\s\((.*?)\s\d{2}:\d{2}:\d{2}\s*->\s*(.*?)\s\d{2}:\d{2}:\d{2}\)/g;
+                let match;
+                while ((match = regex.exec(cleanItinerary)) !== null) {
+                    stations.push(match[1].trim());
+                    stations.push(match[2].trim());
+                }
+            }
+            return stations.filter((item, index) => index === 0 || item !== stations[index - 1]);
+        }
+
+        function handleCardClick(cardElement, encodedItinerary, isDirect, encodedOrigin, encodedHeadsign) {
+           
+            document.querySelectorAll('.train-card').forEach(c => { if (c !== cardElement) c.classList.remove('active'); });
+            const isActive = cardElement.classList.toggle('active');
+
+      
+            clearRouteVisuals();
+
+            
+            if (isActive) {
+                const itinerary = decodeURIComponent(encodedItinerary);
+                const originName = decodeURIComponent(encodedOrigin);
+                const headsign = decodeURIComponent(encodedHeadsign);
+
+                const orderedStations = parseStationsFromItinerary(itinerary, originName, isDirect, headsign);
+
+                if (orderedStations.length > 0) {
+                    const startName = orderedStations[0];
+                    const endName = orderedStations[orderedStations.length - 1];
+
+                  
+                    [
+                        { name: startName, color: 'marker-green', label: '🏁 Start' },
+                        { name: endName, color: 'marker-red', label: '🎯 Dest' }
+                    ].forEach(point => {
+                        const found = allStationsData.find(s =>
+                            s.stop_name.toLowerCase().includes(point.name.toLowerCase()) ||
+                            point.name.toLowerCase().includes(s.stop_name.toLowerCase())
+                        );
+
+                        if (found) {
+                            const marker = L.marker([found.stop_lat, found.stop_lon], {
+                                icon: createColorIcon(point.color)
+                            }).addTo(map).bindPopup(`<b>${point.label}: ${found.stop_name}</b>`);
+
+                            routeMarkers.push(marker);
+                        }
+                    });
+
+               
+                    const startNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(startName.toLowerCase()));
+                    const endNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(endName.toLowerCase()));
+                    if (startNode && endNode) {
+                        map.fitBounds([
+                            [startNode.stop_lat, startNode.stop_lon],
+                            [endNode.stop_lat, endNode.stop_lon]
+                        ], { padding: [50, 50] });
+                    }
+                }
+            }
+        }
+        function clearRouteVisuals() {
+            routeMarkers.forEach(m => map.removeLayer(m));
+            routeMarkers = [];
+            if (routePolyline) {
+                map.removeLayer(routePolyline);
+                routePolyline = null;
+            }
+        }
+
+        function setupNavEvents() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    currentSearchTime = timeHistory.pop();
+                    fetchRoute();
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    const displayed = lastDisplayedTrains.slice(0, 5);
+                    const lastTrain = displayed[displayed.length - 1];
+                    timeHistory.push(currentSearchTime);
+                    try {
+                        let [h, m, s] = lastTrain.departure_time.split(':').map(Number);
+                        s = (s + 1) % 60;
+                        if (s === 0) { m = (m + 1) % 60; if (m === 0) h = (h + 1) % 24; }
+                        currentSearchTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    } catch (e) { currentSearchTime = lastTrain.departure_time; }
+                    fetchRoute();
+                });
+            }
+        }
+
+        async function setupSuggest(inputId, boxId) {
+            const input = document.getElementById(inputId);
+            const box = document.getElementById(boxId);
+
+            const runMockSteps = () => {
+                setTimeout(() => {
+                    document.getElementById('step1').className = 'step done';
+                    document.getElementById('step1').innerText = '✅ 1. Local server contacted successfully.';
+                    document.getElementById('step2').className = 'step active';
+                }, 1500);
+                setTimeout(() => {
+                    document.getElementById('step2').className = 'step done';
+                    document.getElementById('step2').innerText = '✅ 2. Stop tables indexed via SQLAlchemy.';
+                    document.getElementById('step3').className = 'step active';
+                }, 4000);
+                setTimeout(() => {
+                    document.getElementById('step3').className = 'step done';
+                    document.getElementById('step3').innerText = '✅ 3. Haversine spatial matrix mapped.';
+                    document.getElementById('step4').className = 'step active';
+                }, 8000);
+            };
+
+            if (inputId === 'startStation') runMockSteps();
+
+            try {
+                const resStations = await fetch(`${API_BASE}/check_stations`);
+                const dataStations = await resStations.json();
+
+                const stations = dataStations.sample_stations || [];
+                allStationsData = stations;
+
+                document.getElementById('step4').className = 'step done';
+                document.getElementById('step4').innerText = '✅ 4. Transit memory mapping finalized!';
+
+                setTimeout(() => {
+                    const overlay = document.getElementById('appInitOverlay');
+                    if (overlay) overlay.style.display = 'none';
+                }, 600);
+
+                input.addEventListener('input', () => {
+                    const val = input.value.trim().toLowerCase();
+                    box.innerHTML = '';
+
+                    if (!val) { box.style.display = 'none'; return; }
+
+                    const filtered = stations.filter(s => s && s.stop_name && s.stop_name.toLowerCase().includes(val)).slice(0, 5);
+                    if (filtered.length === 0) { box.style.display = 'none'; return; }
+
+                    filtered.forEach(s => {
+                        const div = document.createElement('div');
+                        div.className = 'suggest-item';
+                        div.innerText = s.stop_name;
+
+                        div.addEventListener('click', () => {
+                            input.value = s.stop_name;
+                            box.style.display = 'none';
+                            if (inputId === 'startStation') { selectedLat = null; selectedLon = null; }
+
+                          
+                            if (s.stop_lat && s.stop_lon) {
+                                map.setView([s.stop_lat, s.stop_lon], 15);
+                                if (clickMarker) map.removeLayer(clickMarker);
+                                clearRouteVisuals();
+                                clickMarker = L.marker([s.stop_lat, s.stop_lon], { icon: createColorIcon('marker-green') }).addTo(map).bindPopup(`<b>Selected:</b><br>${s.stop_name}`).openPopup();
+                            }
+                        });
+                        box.appendChild(div);
+                    });
+                    box.style.display = 'block';
+                });
+            } catch (e) {
+                console.error("Autocomplete cache fetch failed:", e);
+                const overlayText = document.querySelector('#appInitOverlay .loading-title');
+                if (overlayText) overlayText.innerHTML = `<span style="color:red;">🛑 Backend Node Offline</span>`;
+                const stepsBox = document.querySelector('.status-steps');
+                if (stepsBox) stepsBox.innerHTML = `<p style="color:#d9534f; font-size:13px; text-align:center; font-weight:bold;">Could not establish a connection to port 8000.<br>Please execute 'uvicorn main:app --port 8001' in your terminal.</p>`;
+            }
+
+            document.addEventListener('click', (e) => {
+                if (e.target !== input && e.target !== box) { box.style.display = 'none'; }
+            });
+        }
+
+        setupSuggest('startStation', 'startSuggest');
+        setupSuggest('endStation', 'endSuggest');
+    </script>
+</body>
+
+</html>

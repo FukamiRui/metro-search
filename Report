@@ -1,0 +1,68 @@
+Day 1
+I've implemented the basic backend environments.
+Using FastAPI, PostgreSQL for the frameworks.
+
+The goal is to build a Metro NYC tubes finder in order to apply with advanced searching algorithms for experiments.
+In my perspective, the expansion of the AI era is amazinglly growing up, and I reckon people are loosing the avility of the coding in modern tech companies. I'm too, I can't imagine the life without AI in current days.
+
+So I want to implement all of my DS skills in this, beyond for the portfolio.
+
+
+Faced bottlenecks--
+
+- By using the load for each time when the user hit the tranin search, the data usage and memory strage have 
+
+Day 2
+By I have implemented the basic structures of PostgreSQL for putting stations attributes from Database which datas are I've already gotten from ""import-metro.py"". To ensure the scalable framework, I added the ""models.py"" and which are for stations, routes, trips, and prices.
+
+Day 3
+I think the basic outline is done, so I'm going to be looking at the searching and sorting algorithms for one-way (direct) route.
+And I believe that this implementation can use for the trip that requires transfer.
+
+Basically, I'm aiming to implement at least O(N log N) for the serching and O(N) for sorting.
+The data of stations is massive data and those are stored each of tags at the same time, so I picked the needed tags and created the database using **dotload** and engine is created using *sqlalchemy* engine for the connection pooling.
+Specifically, I predict that the TRAIN APP is frequently accessed by users, everytime they open the web and engine connects to the database is going to be the reason of bottleneck and this problem solving could be hard to find. So before it happens I used sqlalchemy engine.
+
+
+
+
+
+for file separating (5hours)
+22 passed, 1 warning in 45.83s 
+22 passed, 1 warning in 55.27s 
+
+for nearest route error handling I forgot to add restriction for the input value, so I added float() for user input then pytest has beed passed.
+And this algorithm was returning the nearest station even I have inputed the lon and lat of Kings Cross Station, so I implemented the output restriction and which is setted the maximam 2 kilometer from the retured answer, otherwise it returns None which is controlled in the ""main.py""
+
+ if min_distance >= 2:
+         return None 
+
+Then it passed pytest for varios aspects of inputs.
+
+The coverage was
+
+Name                Stmts.   Miss.   Cover
+-------------------------------------------
+database.py          17       1       94%
+import-metro.py      25       25      0%
+main.py              148      31      79%
+model.py             39       0      100%
+search.py            149      33      78%
+test.api.py          49       3       94%
+-------------------------------------------
+TOTAL                427      93      78%
+
+
+
+
+Name              Stmts   Miss  Cover
+-------------------------------------
+database.py          17      1    94%
+import-metro.py      25     25     0%
+main.py             153     31    80%
+models.py            39      0   100%
+search.py           106     27    75%
+test_api.py          49      1    98%
+test_exist.py        20      0   100%
+-------------------------------------
+TOTAL               409     85    79%
