@@ -296,7 +296,7 @@ async def get_all_stations(db: Session = Depends(get_db)):
             "sample_stations": cached_data
         }
     
-    print("⚠️ Warning: Spatial cache is empty. Falling back to direct DB query...")
+    print("Warning: Spatial cache is empty. Falling back to direct DB query...")
     stations = db.query(models.Stop).order_by(models.Stop.stop_name.asc()).all()
     spatial_list = []
     for s in stations:

@@ -368,7 +368,7 @@
             </div>
 
             <div class="notice-text">
-                ⚠️ Note: The very first load takes roughly 20-30 seconds because Python is computing thousands of
+                 Note: The very first load takes roughly 20-30 seconds because Python is computing thousands of
                 transit nodes directly into RAM for blazing fast lookups later.
             </div>
         </div>
@@ -756,9 +756,9 @@
             } catch (e) {
                 console.error("Autocomplete cache fetch failed:", e);
                 const overlayText = document.querySelector('#appInitOverlay .loading-title');
-                if (overlayText) overlayText.innerHTML = `<span style="color:red;">🛑 Backend Node Offline</span>`;
+                if (overlayText) overlayText.innerHTML = `<span style="color:red;"> Backend is Offline</span>`;
                 const stepsBox = document.querySelector('.status-steps');
-                if (stepsBox) stepsBox.innerHTML = `<p style="color:#d9534f; font-size:13px; text-align:center; font-weight:bold;">Could not establish a connection to port 8000.<br>Please execute 'uvicorn main:app --port 8001' in your terminal.</p>`;
+                if (stepsBox) stepsBox.innerHTML = `<p style="color:#d9534f; font-size:13px; text-align:center; font-weight:bold;">Could not establish a connection to port 8000.<br>Please execute 'uvicorn main:app --port 8000' in your terminal.</p>`;
             }
 
             document.addEventListener('click', (e) => {
