@@ -167,11 +167,14 @@ def calculate_nearest_station(user_lat: float, user_lon: float) -> str:
          return None  
     return best_station
 
+
 @app.get("/")
 async def get_index():
-    with open("index.html", "r", encoding="utf-8") as f:
+    # load index.html
+    file_path = os.path.join(os.path.dirname(__file__), "index.html")
+    with open(file_path, "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
-
+    
 @app.get("/search_route")
 async def run_search_route(
     end_stop_name: str, 
