@@ -8,6 +8,8 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
+print(f"DEBUG: The URL is -> {os.getenv('DATABASE_URL')}")
+
 def import_csv_to_db(file_name, table_name, use_cols):
     """
     Reads a GTFS CSV (TXT) file efficiently using Pandas 
