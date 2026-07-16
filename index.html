@@ -408,7 +408,10 @@
     <div id="result"></div>
 
     <script>
-        const API_BASE = "https://metro-search.onrender.com";
+        const API_BASE = window.location.hostname === "localhost" 
+        ? "http://localhost:8000" // For local
+        : "https://metro-search.onrender.com"; // For Deploy
+        
 
         let currentSearchTime = "00:00:00";
         let timeHistory = [];
