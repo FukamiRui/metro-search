@@ -166,6 +166,9 @@ def calculate_nearest_station(user_lat: float, user_lon: float) -> str:
          return None  
     return best_station
 
+app.get("/")
+async def root():
+    return {"message": "NYC Subway Route API is running. Check /docs for documentation."}
 
 @app.get("/search_route")
 async def run_search_route(
