@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
                 models.StopTime.stop_sequence
             )
             .filter(models.StopTime.departure_time >= "00:00:00")
-            .all()
+            .yield_per(5000)
         )
         
         for trip_id, stop_id, dep_time, arr_time, stop_seq in all_stop_times:
