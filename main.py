@@ -212,7 +212,7 @@ async def run_search_route(
                 if not path_data:
                     continue
                 
-                # 💡 順序を崩さずに重複を排除
+               
                 route_list = []
                 for p in path_data:
                     r_id = str(p.get("route_id", "")).strip()
