@@ -200,6 +200,11 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
     return {"status": "Success", "results": formatted_results}
 
 def search_transfer_db(db: Session, start_station_name: str, end_station_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
+  
+    direct_results = search_direct_db(db, start_station_name, end_station_name, PROJECT_CACHE, departure_time_limit)
+    if direct_results.get("status") == "Success" and len(direct_results["results"]) > 0:
+        return direct_results
+
     stop_name_to_ids = PROJECT_CACHE["stop_name_to_ids"]
     stop_id_to_name = PROJECT_CACHE["stop_id_to_name"]
 
@@ -223,8 +228,7 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
             t1_b.departure_time >= departure_time_limit
         )
         .order_by(t1_b.departure_time.asc())
-        .limit(1000)
-        .all()
+        .yield_per(5000) 
     )
 
     t2_b = aliased(models.StopTime)
@@ -241,25 +245,24 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
             t2_b.departure_time >= departure_time_limit
         )
         .order_by(t2_a.arrival_time.asc())
-        .limit(1000)
-        .all()
+        .yield_per(5000)
     )
 
     second_leg_map = {}
     for t2_b_obj, t2_a_obj, tr2_obj in second_legs:
         board_name = stop_id_to_name.get(t2_b_obj.stop_id)
-        if not board_name:
-            continue
+        if not board_name: continue
         if board_name not in second_leg_map:
             second_leg_map[board_name] = []
         second_leg_map[board_name].append((t2_b_obj, t2_a_obj, tr2_obj))
 
-    formatted_results = []
+    raw_results = []
     for t1_b_obj, t1_a_obj, tr1_obj in first_legs:
         transfer_name = stop_id_to_name.get(t1_a_obj.stop_id)
         
         if transfer_name and transfer_name in second_leg_map:
             for t2_b_obj, t2_a_obj, tr2_obj in second_leg_map[transfer_name]:
+            
                 if t1_a_obj.arrival_time <= t2_b_obj.departure_time:
                     path = [
                         {
@@ -277,25 +280,27 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
                             "arrival_time": t2_a_obj.arrival_time
                         }
                     ]
-                    formatted_results.append({
+                    raw_results.append({
                         "real_departure_time": t1_b_obj.departure_time,
                         "real_arrival_time": t2_a_obj.arrival_time,
                         "status": "Success",
                         "path": path
                     })
-    formatted_results.sort(key=lambda x: x["real_arrival_time"])
-    
-    unique_results = []
+
+
+    raw_results.sort(key=lambda x: x["real_arrival_time"])
+
+
+    formatted_results = []
     seen_times = set()
     
-    for res in formatted_results:
+    for res in raw_results:
         time_pair = (res["real_departure_time"], res["real_arrival_time"])
-
         if time_pair not in seen_times:
             seen_times.add(time_pair)
-            unique_results.append(res)
+            formatted_results.append(res)
             
-        if len(unique_results) >= 5:
+        if len(formatted_results) >= 5:
             break
 
-    return {"status": "Success", "results": unique_results}
+    return {"status": "Success", "results": formatted_results}
