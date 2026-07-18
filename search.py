@@ -283,6 +283,19 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
                         "status": "Success",
                         "path": path
                     })
-
     formatted_results.sort(key=lambda x: x["real_arrival_time"])
-    return {"status": "Success", "results": formatted_results[:5]}
+    
+    unique_results = []
+    seen_times = set()
+    
+    for res in formatted_results:
+        time_pair = (res["real_departure_time"], res["real_arrival_time"])
+
+        if time_pair not in seen_times:
+            seen_times.add(time_pair)
+            unique_results.append(res)
+            
+        if len(unique_results) >= 5:
+            break
+
+    return {"status": "Success", "results": unique_results}
