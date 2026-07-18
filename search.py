@@ -27,7 +27,6 @@ def search_direct_cached(start_name: str, end_name: str, cache_data: dict, depar
         if not deps:
             continue
         
-        
         idx = bisect.bisect_left(dep_times, departure_time_limit)
         active_departures.extend(deps[idx:])
 
@@ -105,7 +104,6 @@ def search_transfer_cached(start_station_name: str, end_station_name: str, cache
                         continue
 
                     if next_sid in end_station_ids:
-                       
                         real_dep_time = path[0]["departure_time"] if path else dep["departure_time"]
                         
                         results.append({
@@ -122,20 +120,18 @@ def search_transfer_cached(start_station_name: str, end_station_name: str, cache
     return {"status": "Success", "results": sorted(results, key=lambda x: x["real_arrival_time"])}
 
 def calculate_nearest_station(user_lat: float, user_lon: float, spatial_cache: list) -> str:
-
     best_station = None
     min_distance_km = float('inf')
     R = 6371.0
     
-    user_lat_rad = math.radians(user_lat)
-    user_lon_rad = math.radians(user_lon)
-
     if user_lat == None or user_lon == None:
         return None
+        
+    user_lat_rad = math.radians(user_lat)
+    user_lon_rad = math.radians(user_lon)
     
     for station in spatial_cache:
         try:
-           
             st_lat = float(station["stop_lat"])
             st_lon = float(station["stop_lon"])
             
@@ -158,79 +154,52 @@ def calculate_nearest_station(user_lat: float, user_lon: float, spatial_cache: l
             
     return best_station
 
+def search_direct_db(db: Session, start_station_name: str, end_station_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
+    stop_name_to_ids = PROJECT_CACHE["stop_name_to_ids"]
+    start_ids = stop_name_to_ids.get(start_station_name, [])
+    end_ids = stop_name_to_ids.get(end_station_name, [])
 
+    if not start_ids or not end_ids:
+        return {"status": "Success", "results": []}
 
+    t_board = aliased(models.StopTime)
+    t_alight = aliased(models.StopTime)
+    trip = aliased(models.Trip)
 
-def search_direct_db(db: Session, start_stop_name: str, end_stop_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
-    
-    
-    
-    start_stop_ids = PROJECT_CACHE["stop_name_to_ids"].get(start_stop_name, [])
-    end_stop_ids = PROJECT_CACHE["stop_name_to_ids"].get(end_stop_name, [])
-
-    if not start_stop_ids or not end_stop_ids:
-        return {"next_trains": []}
-
- 
-    t1_board = aliased(models.StopTime)
-    t1_alight = aliased(models.StopTime)
-    t2_board = aliased(models.StopTime)
-    t2_alight = aliased(models.StopTime)
-    trip1 = aliased(models.Trip)
-    trip2 = aliased(models.Trip)
-    
-    
-    s1 = aliased(models.Stop)
-    s2 = aliased(models.Stop)
-
-    
-    results = (
-        db.query(t1_board, t1_alight, t2_board, t2_alight, trip1, trip2)
-      
-        .join(t1_alight, t1_board.trip_id == t1_alight.trip_id)
-        .join(trip1, t1_board.trip_id == trip1.trip_id)
-        
-      
-        .join(s1, t1_alight.stop_id == s1.stop_id)
-        .join(s2, s1.stop_name == s2.stop_name)
-        .join(t2_board, s2.stop_id == t2_board.stop_id)
-        
-       
-        .join(t2_alight, t2_board.trip_id == t2_alight.trip_id)
-        .join(trip2, t2_board.trip_id == trip2.trip_id)
-        
-    
+    query_results = (
+        db.query(t_board, t_alight, trip)
+        .join(t_alight, t_board.trip_id == t_alight.trip_id)
+        .join(trip, t_board.trip_id == trip.trip_id)
         .filter(
-            t1_board.stop_id.in_(start_stop_ids),
-            t2_alight.stop_id.in_(end_stop_ids),
-            t1_board.stop_sequence < t1_alight.stop_sequence,
-            t2_board.stop_sequence < t2_alight.stop_sequence,
-            
-        
-            t1_board.departure_time >= departure_time_limit,
-            t1_alight.arrival_time <= t2_board.departure_time
+            t_board.stop_id.in_(start_ids),
+            t_alight.stop_id.in_(end_ids),
+            t_board.stop_sequence < t_alight.stop_sequence,
+            t_board.departure_time >= departure_time_limit
         )
-        .order_by(t2_alight.arrival_time.asc())
+        .order_by(t_alight.arrival_time.asc())
         .limit(5)
         .all()
     )
 
-    
-    next_trains = []
-    for start_time, end_time, trip in results:
-        next_trains.append({
-            "route_id": trip.route_id,
-            "trip_headsign": trip.trip_headsign or f"To {end_stop_name}",
-            "departure_time": start_time.departure_time,
-            "arrival_time": end_time.arrival_time
+    formatted_results = []
+    for t_b, t_a, tr in query_results:
+        path = [{
+            "route_id": tr.route_id,
+            "board_station": start_station_name,
+            "getoff_station": end_station_name,
+            "departure_time": t_b.departure_time,
+            "arrival_time": t_a.arrival_time
+        }]
+        formatted_results.append({
+            "real_departure_time": t_b.departure_time,
+            "real_arrival_time": t_a.arrival_time,
+            "status": "Success",
+            "path": path
         })
 
-    return {"next_trains": next_trains}
+    return {"status": "Success", "results": formatted_results}
 
 def search_transfer_db(db: Session, start_station_name: str, end_station_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
-    """
-
-    """
     stop_name_to_ids = PROJECT_CACHE["stop_name_to_ids"]
     stop_id_to_name = PROJECT_CACHE["stop_id_to_name"]
 
@@ -240,72 +209,80 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
     if not start_ids or not end_ids:
         return {"status": "Success", "results": []}
 
- 
-    t1_board = aliased(models.StopTime)
-    t1_alight = aliased(models.StopTime)
+    t1_b = aliased(models.StopTime)
+    t1_a = aliased(models.StopTime)
+    tr1 = aliased(models.Trip)
 
-    t2_board = aliased(models.StopTime)
-    t2_alight = aliased(models.StopTime)
-
-    trip1 = aliased(models.Trip)
-    trip2 = aliased(models.Trip)
-
-    query_results = (
-        db.query(t1_board, t1_alight, t2_board, t2_alight, trip1, trip2)
-        
-
-        .join(t1_alight, t1_board.trip_id == t1_alight.trip_id)
-        .join(trip1, t1_board.trip_id == trip1.trip_id)
-        
-     
-        .join(t2_board, t1_alight.stop_id == t2_board.stop_id)
-        
-
-        .join(t2_alight, t2_board.trip_id == t2_alight.trip_id)
-        .join(trip2, t2_board.trip_id == trip2.trip_id)
-        
-    
+    first_legs = (
+        db.query(t1_b, t1_a, tr1)
+        .join(t1_a, t1_b.trip_id == t1_a.trip_id)
+        .join(tr1, t1_b.trip_id == tr1.trip_id)
         .filter(
-            t1_board.stop_id.in_(start_ids),
-            t2_alight.stop_id.in_(end_ids),
-            t1_board.stop_sequence < t1_alight.stop_sequence,
-            t2_board.stop_sequence < t2_alight.stop_sequence,
-            t1_board.departure_time >= departure_time_limit
+            t1_b.stop_id.in_(start_ids),
+            t1_b.stop_sequence < t1_a.stop_sequence,
+            t1_b.departure_time >= departure_time_limit
         )
-        .order_by(t2_alight.arrival_time.asc())
-        .limit(5)
+        .order_by(t1_b.departure_time.asc())
+        .limit(1000)
         .all()
     )
-   
-    
+
+    t2_b = aliased(models.StopTime)
+    t2_a = aliased(models.StopTime)
+    tr2 = aliased(models.Trip)
+
+    second_legs = (
+        db.query(t2_b, t2_a, tr2)
+        .join(t2_a, t2_b.trip_id == t2_a.trip_id)
+        .join(tr2, t2_b.trip_id == tr2.trip_id)
+        .filter(
+            t2_a.stop_id.in_(end_ids),
+            t2_b.stop_sequence < t2_a.stop_sequence,
+            t2_b.departure_time >= departure_time_limit
+        )
+        .order_by(t2_a.arrival_time.asc())
+        .limit(1000)
+        .all()
+    )
+
+    second_leg_map = {}
+    for t2_b_obj, t2_a_obj, tr2_obj in second_legs:
+        board_name = stop_id_to_name.get(t2_b_obj.stop_id)
+        if not board_name:
+            continue
+        if board_name not in second_leg_map:
+            second_leg_map[board_name] = []
+        second_leg_map[board_name].append((t2_b_obj, t2_a_obj, tr2_obj))
 
     formatted_results = []
-    for t1_b, t1_a, t2_b, t2_a, tr1, tr2 in query_results:
-        if t1_a.arrival_time > t2_b.departure_time:
-            continue
+    for t1_b_obj, t1_a_obj, tr1_obj in first_legs:
+        transfer_name = stop_id_to_name.get(t1_a_obj.stop_id)
         
-        path = [
-            {
-                "route_id": tr1.route_id,
-                "board_station": start_station_name,
-                "getoff_station": stop_id_to_name.get(t1_a.stop_id, "Unknown"),
-                "departure_time": t1_b.departure_time,
-                "arrival_time": t1_a.arrival_time
-            },
-            {
-                "route_id": tr2.route_id,
-                "board_station": stop_id_to_name.get(t2_b.stop_id, "Unknown"),
-                "getoff_station": end_station_name,
-                "departure_time": t2_b.departure_time,
-                "arrival_time": t2_a.arrival_time
-            }
-        ]
-        
-        formatted_results.append({
-            "real_departure_time": t1_b.departure_time,
-            "real_arrival_time": t2_a.arrival_time,
-            "status": "Success",
-            "path": path
-        })
+        if transfer_name and transfer_name in second_leg_map:
+            for t2_b_obj, t2_a_obj, tr2_obj in second_leg_map[transfer_name]:
+                if t1_a_obj.arrival_time <= t2_b_obj.departure_time:
+                    path = [
+                        {
+                            "route_id": tr1_obj.route_id,
+                            "board_station": start_station_name,
+                            "getoff_station": transfer_name,
+                            "departure_time": t1_b_obj.departure_time,
+                            "arrival_time": t1_a_obj.arrival_time
+                        },
+                        {
+                            "route_id": tr2_obj.route_id,
+                            "board_station": transfer_name,
+                            "getoff_station": end_station_name,
+                            "departure_time": t2_b_obj.departure_time,
+                            "arrival_time": t2_a_obj.arrival_time
+                        }
+                    ]
+                    formatted_results.append({
+                        "real_departure_time": t1_b_obj.departure_time,
+                        "real_arrival_time": t2_a_obj.arrival_time,
+                        "status": "Success",
+                        "path": path
+                    })
 
-    return {"status": "Success", "results": formatted_results}
+    formatted_results.sort(key=lambda x: x["real_arrival_time"])
+    return {"status": "Success", "results": formatted_results[:5]}

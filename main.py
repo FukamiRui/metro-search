@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
         print(" GTFS & Spatial Data successfully cached. System is fully in-memory!")
         
     except Exception as e:
-        print(f"🛑 Error during cache initialization: {e}")
+        print(f" Error during cache initialization: {e}")
     finally:
         db.close()
 
