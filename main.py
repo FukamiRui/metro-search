@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI):
                 models.StopTime.stop_sequence
             )
             .filter(models.StopTime.departure_time >= "00:00:00")
+            #.all() -> .yield for avoiding a bottleneck
             .yield_per(5000)
         )
         
