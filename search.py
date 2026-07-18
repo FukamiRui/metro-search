@@ -177,7 +177,7 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
             t_board.departure_time >= departure_time_limit
         )
         .order_by(t_alight.arrival_time.asc())
-        .limit(5)
+        .limit(1000)
         .all()
     )
 
@@ -228,7 +228,8 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
             t1_b.departure_time >= departure_time_limit
         )
         .order_by(t1_b.departure_time.asc())
-        .yield_per(5000) 
+        .limit(1000)
+        .all()
     )
 
     t2_b = aliased(models.StopTime)
