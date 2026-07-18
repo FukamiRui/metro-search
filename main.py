@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 import os
 from database import engine, get_db, SessionLocal
 import models
-from search import search_direct_cached, search_transfer_cached
+from search import search_direct_db, search_transfer_db
 from fastapi.responses import HTMLResponse
+import tracemalloc
+import time
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -18,16 +20,16 @@ PROJECT_CACHE = {
     "stations_spatial_data": [], 
     "stop_id_to_name": {},
     "stop_name_to_ids": {},
-    "station_departure_map": {},
-    "station_departure_times_only": {},  # for bisect
-    "trip_schedules": {},
-    "trip_to_route": {},
-    "trip_id_to_object": {}
 }
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Loading NYC Subway GTFS and Spatial data into memory...")
+   
+    #Scaling speed
+    tracemalloc.start()
+    start_time = time.time()
+
     db = SessionLocal()
     try:
         stations = db.query(models.Stop).order_by(models.Stop.stop_name.asc()).all()
@@ -52,50 +54,19 @@ async def lifespan(app: FastAPI):
             PROJECT_CACHE["stop_name_to_ids"].setdefault(s.stop_name, []).append(s.stop_id)
         
         print("Caching all stop times...")
-        all_stop_times = (
-            db.query(
-                models.StopTime.trip_id, 
-                models.StopTime.stop_id, 
-                models.StopTime.departure_time, 
-                models.StopTime.arrival_time, 
-                models.StopTime.stop_sequence
-            )
-            .filter(models.StopTime.departure_time >= "00:00:00")
-            #.all() -> .yield for avoiding a bottleneck
-            .yield_per(5000)
-        )
         
-        for trip_id, stop_id, dep_time, arr_time, stop_seq in all_stop_times:
-            if dep_time:
-                PROJECT_CACHE["station_departure_map"].setdefault(stop_id, []).append({
-                    "trip_id": trip_id,
-                    "departure_time": str(dep_time).strip(),
-                    "stop_sequence": stop_seq
-                })
-            PROJECT_CACHE["trip_schedules"].setdefault(trip_id, []).append({
-                "stop_id": stop_id,
-                "arrival_time": str(arr_time).strip() if arr_time else None,
-                "stop_sequence": stop_seq
-            })
-            
-        # Sort by the erliest destinating train and caches the times list
-        for sid in PROJECT_CACHE["station_departure_map"]:
-            PROJECT_CACHE["station_departure_map"][sid].sort(key=lambda x: x["departure_time"])
-            PROJECT_CACHE["station_departure_times_only"][sid] = [
-                d["departure_time"] for d in PROJECT_CACHE["station_departure_map"][sid]
-            ]
-            
-        for tid in PROJECT_CACHE["trip_schedules"]:
-            PROJECT_CACHE["trip_schedules"][tid].sort(key=lambda x: x["stop_sequence"])
-            
-        all_trips = db.query(models.Trip).all()
-        PROJECT_CACHE["trip_to_route"] = {t.trip_id: str(t.route_id).strip() for t in all_trips}
-        PROJECT_CACHE["trip_id_to_object"] = {
-            t.trip_id: {"route_id": t.route_id, "trip_headsign": t.trip_headsign} 
-            for t in all_trips
-        }
+
+        current_memory, peak_memory = tracemalloc.get_traced_memory()
+        end_time = time.time()
+        tracemalloc.stop()
+
+        print(f" Time taking: {end_time - start_time:.2f} sec")
+        print(f" Current Memory Usage: {current_memory / 10**6:.2f} MB")
+        print(f" Peak Memory Usage: {peak_memory / 10**6:.2f} MB")
+        # --------------------------------------------------------
+
         
-        print("⚡ GTFS & Spatial Data successfully cached. System is fully in-memory!")
+        print(" GTFS & Spatial Data successfully cached. System is fully in-memory!")
         
     except Exception as e:
         print(f"🛑 Error during cache initialization: {e}")
@@ -211,8 +182,8 @@ async def run_search_route(
     
     
 
-    direct_res = search_direct_cached(start_stop_name, end_stop_name, PROJECT_CACHE, departure_time_limit=departure_time_limit)
-    transfer_res = search_transfer_cached(start_stop_name, end_stop_name, PROJECT_CACHE, departure_time_limit=departure_time_limit)
+    direct_res = search_direct_db(db, start_stop_name, end_stop_name, PROJECT_CACHE, departure_time_limit)
+    transfer_res = search_transfer_db(db, start_stop_name, end_stop_name, PROJECT_CACHE, departure_time_limit)
     
     combined_trains = []
     

@@ -13,7 +13,7 @@ class Trip(Base):
     __tablename__ = "trips"
     
     trip_id = Column(String, primary_key=True, index=True)
-    route_id = Column(String, ForeignKey("routes.route_id"), nullable=False)
+    route_id = Column(String, ForeignKey("routes.route_id"), nullable=False, index=True)
     service_id = Column(String, index=True)
     trip_headsign = Column(String, nullable=True)
 
@@ -31,7 +31,7 @@ class StopTime(Base):
     trip_id = Column(String, ForeignKey("trips.trip_id"), primary_key=True, index=True)
     stop_id = Column(String, ForeignKey("stops.stop_id"), nullable=False, index=True)
     arrival_time = Column(String, nullable=False)
-    departure_time = Column(String, nullable=False)
+    departure_time = Column(String, nullable=False, index=True)
     stop_sequence = Column(Integer, primary_key=True, index=True)
 
 class Calendar(Base):

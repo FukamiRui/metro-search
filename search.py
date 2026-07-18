@@ -1,6 +1,8 @@
 from collections import deque
 import math
 import bisect  
+from sqlalchemy.orm import Session, aliased
+import models
 
 def search_direct_cached(start_name: str, end_name: str, cache_data: dict, departure_time_limit: str = "00:00:00"):
     departure_time_limit = str(departure_time_limit).strip()
@@ -157,3 +159,139 @@ def calculate_nearest_station(user_lat: float, user_lon: float, spatial_cache: l
             continue
             
     return best_station
+
+
+
+
+def search_direct_db(db: Session, start_stop_name: str, end_stop_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
+    """
+    DBのJOINを駆使して、直通ルートを一撃で検索する最強の関数
+    """
+    # 1. キャッシュから、乗車駅と降車駅の「駅IDリスト」を取得（例: "Times Sq" -> ["120N", "120S", ...])
+    start_stop_ids = PROJECT_CACHE["stop_name_to_ids"].get(start_stop_name, [])
+    end_stop_ids = PROJECT_CACHE["stop_name_to_ids"].get(end_stop_name, [])
+
+    if not start_stop_ids or not end_stop_ids:
+        return {"next_trains": []}
+
+    # 💡 SQLの「自己結合」を使うため、StopTimeテーブルの分身（エイリアス）を2つ作ります
+    # st1 = 乗車駅のデータ, st2 = 降車駅のデータ
+    st1 = aliased(models.StopTime)
+    st2 = aliased(models.StopTime)
+
+    # 2. データベースに「出発駅と到着駅を同じ電車（trip_id）で結ぶもの」を問い合わせる
+    results = (
+        db.query(st1, st2, models.Trip)
+        # 条件1: 乗車駅と降車駅の trip_id（電車）が同じであること
+        .join(st2, st1.trip_id == st2.trip_id)
+        # 条件2: 路線の情報（Route IDなど）を取得するためにTripテーブルを結合
+        .join(models.Trip, st1.trip_id == models.Trip.trip_id)
+        .filter(
+            st1.stop_id.in_(start_stop_ids),       # 乗車駅がスタート駅
+            st2.stop_id.in_(end_stop_ids),         # 降車駅がゴール駅
+            st1.stop_sequence < st2.stop_sequence, # 【重要】乗る駅の方が、降りる駅より手前にあること（逆走防止）
+            st1.departure_time >= departure_time_limit # 指定された時間以降の電車
+        )
+        .order_by(st1.departure_time.asc()) # 出発時間が早い順に並べる
+        .limit(5) # 上位5件だけ取得
+        .all()
+    )
+
+    # 3. 取得した結果をフロントエンド向けの形に整形する
+    next_trains = []
+    for start_time, end_time, trip in results:
+        next_trains.append({
+            "route_id": trip.route_id,
+            "trip_headsign": trip.trip_headsign or f"To {end_stop_name}",
+            "departure_time": start_time.departure_time,
+            "arrival_time": end_time.arrival_time
+        })
+
+    return {"next_trains": next_trains}
+
+def search_transfer_db(db: Session, start_station_name: str, end_station_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
+    """
+    1回の乗り換え（2本の列車）ルートをDBクエリで高速に探索する関数
+    """
+    stop_name_to_ids = PROJECT_CACHE["stop_name_to_ids"]
+    stop_id_to_name = PROJECT_CACHE["stop_id_to_name"]
+
+    start_ids = stop_name_to_ids.get(start_station_name, [])
+    end_ids = stop_name_to_ids.get(end_station_name, [])
+
+    if not start_ids or not end_ids:
+        return {"status": "Success", "results": []}
+
+    # 💡 4つのテーブルの分身（エイリアス）を用意する
+    # 列車1の「乗車駅」と「降車駅」
+    t1_board = aliased(models.StopTime)
+    t1_alight = aliased(models.StopTime)
+    # 列車2の「乗車駅」と「降車駅」
+    t2_board = aliased(models.StopTime)
+    t2_alight = aliased(models.StopTime)
+
+    # 列車1と列車2の情報を取得するためのTripテーブル
+    trip1 = aliased(models.Trip)
+    trip2 = aliased(models.Trip)
+
+    # 💡 SQLで一気に乗り換えルートを検索
+    # 💡 SQLで一気に乗り換えルートを検索 (修正版: JOINの順番を正しくチェーン化)
+    query_results = (
+        db.query(t1_board, t1_alight, t2_board, t2_alight, trip1, trip2)
+        
+        # 1本目の列車（乗車駅 ➡ 降車駅）
+        .join(t1_alight, t1_board.trip_id == t1_alight.trip_id)
+        .join(trip1, t1_board.trip_id == trip1.trip_id)
+        
+        # 🔗 ここが超重要！1本目の降車駅と、2本目の乗車駅を直接JOINで繋ぐ
+        .join(t2_board, t1_alight.stop_id == t2_board.stop_id)
+        
+        # 2本目の列車（乗車駅 ➡ 降車駅）
+        .join(t2_alight, t2_board.trip_id == t2_alight.trip_id)
+        .join(trip2, t2_board.trip_id == trip2.trip_id)
+        
+        # 乗り換え条件のフィルタリング
+        .filter(
+            t1_board.stop_id.in_(start_ids),
+            t2_alight.stop_id.in_(end_ids),
+            t1_board.stop_sequence < t1_alight.stop_sequence,
+            t2_board.stop_sequence < t2_alight.stop_sequence,
+            t1_board.departure_time >= departure_time_limit
+        )
+        .order_by(t2_alight.arrival_time.asc())
+        .limit(5)
+        .all()
+    )
+   
+    
+
+    formatted_results = []
+    for t1_b, t1_a, t2_b, t2_a, tr1, tr2 in query_results:
+        if t1_a.arrival_time > t2_b.departure_time:
+            continue
+        
+        path = [
+            {
+                "route_id": tr1.route_id,
+                "board_station": start_station_name,
+                "getoff_station": stop_id_to_name.get(t1_a.stop_id, "Unknown"),
+                "departure_time": t1_b.departure_time,
+                "arrival_time": t1_a.arrival_time
+            },
+            {
+                "route_id": tr2.route_id,
+                "board_station": stop_id_to_name.get(t2_b.stop_id, "Unknown"),
+                "getoff_station": end_station_name,
+                "departure_time": t2_b.departure_time,
+                "arrival_time": t2_a.arrival_time
+            }
+        ]
+        
+        formatted_results.append({
+            "real_departure_time": t1_b.departure_time,
+            "real_arrival_time": t2_a.arrival_time,
+            "status": "Success",
+            "path": path
+        })
+
+    return {"status": "Success", "results": formatted_results}
