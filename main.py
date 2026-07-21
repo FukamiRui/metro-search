@@ -146,15 +146,6 @@ def calculate_nearest_station(user_lat: float, user_lon: float) -> str:
     return best_station
 
 
-@app.get("/search_route")
-def search_route_api(start_stop_name: str, end_stop_name: str, departure_time_limit: str = None, db: Session = Depends(get_db)):
-    
-  
-    if not departure_time_limit:
-        ny_time = datetime.now(ZoneInfo("America/New_York"))
-        departure_time_limit = ny_time.strftime("%H:%M:%S")
-
-
 @app.get("/")
 async def get_index():
     # load index.html
