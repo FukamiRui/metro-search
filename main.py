@@ -13,7 +13,12 @@ import time
 
 models.Base.metadata.create_all(bind=engine)
 
+from zoneinfo import ZoneInfo
+from datetime import datetime
 
+
+
+   
 # In memorize all required datas at the first
 PROJECT_CACHE = {
     "all_stations": [],          
@@ -139,6 +144,15 @@ def calculate_nearest_station(user_lat: float, user_lon: float) -> str:
     if min_distance >= 2:
          return None  
     return best_station
+
+
+@app.get("/search_route")
+def search_route_api(start_stop_name: str, end_stop_name: str, departure_time_limit: str = None, db: Session = Depends(get_db)):
+    
+  
+    if not departure_time_limit:
+        ny_time = datetime.now(ZoneInfo("America/New_York"))
+        departure_time_limit = ny_time.strftime("%H:%M:%S")
 
 
 @app.get("/")
