@@ -504,7 +504,7 @@
 
             let url = `${API_BASE}/search_route?end_stop_name=${encodeURIComponent(end)}&departure_time_limit=${currentSearchTime}`;
             const startVal = document.getElementById('startStation').value;
-            if (selectedLat && selectedLon && (startVal.includes("📍") || startVal.includes("📡"))) {
+            if (selectedLat && selectedLon && (startVal.includes("📍") || startVal.includes(" "))) {
                 url += `&user_lat=${selectedLat}&user_lon=${selectedLon}`;
             } else {
                 if (!startVal) {
@@ -520,7 +520,7 @@
                 const res = await fetch(url);
                 if (!res.ok) {
                     const errorData = await res.json();
-                    resultDiv.innerHTML = `<p style="color:red; font-weight:bold;">⚠️ Error: ${errorData.detail || "Server error."}</p>`;
+                    resultDiv.innerHTML = `<p style="color:red; font-weight:bold;"> ERROR: ${errorData.detail || "Server error."}</p>`;
                     return;
                 }
                 const data = await res.json();
@@ -551,7 +551,7 @@
             const pageTrains = data.all_trains.slice(0, 5);
 
             let html = `<h3>Search Results (Departure Board: ${data.origin_station || "As Input"})</h3>`;
-            html += `<p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">👇 Click a card to expand timeline & plot route straight line on map.</p>`;
+            html += `<p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">Click a card below to expand timeline & plot route straight line on map.</p>`;
 
             pageTrains.forEach((train) => {
                 const tag = train.is_direct ? '<span class="direct-tag">Direct</span>' : '<span class="transfer-tag">Transfer</span>';
@@ -700,17 +700,17 @@
             const runMockSteps = () => {
                 setTimeout(() => {
                     document.getElementById('step1').className = 'step done';
-                    document.getElementById('step1').innerText = '✅ 1. Local server contacted successfully.';
+                    document.getElementById('step1').innerText = ' 1. Local server contacted successfully.';
                     document.getElementById('step2').className = 'step active';
                 }, 1500);
                 setTimeout(() => {
                     document.getElementById('step2').className = 'step done';
-                    document.getElementById('step2').innerText = '✅ 2. Stop tables indexed via SQLAlchemy.';
+                    document.getElementById('step2').innerText = ' 2. Stop tables indexed via SQLAlchemy.';
                     document.getElementById('step3').className = 'step active';
                 }, 4000);
                 setTimeout(() => {
                     document.getElementById('step3').className = 'step done';
-                    document.getElementById('step3').innerText = '✅ 3. Haversine spatial matrix mapped.';
+                    document.getElementById('step3').innerText = ' 3. Haversine spatial matrix mapped.';
                     document.getElementById('step4').className = 'step active';
                 }, 8000);
             };
@@ -725,7 +725,7 @@
                 allStationsData = stations;
 
                 document.getElementById('step4').className = 'step done';
-                document.getElementById('step4').innerText = '✅ 4. Transit memory mapping finalized!';
+                document.getElementById('step4').innerText = ' 4. Transit memory mapping finalized!';
 
                 setTimeout(() => {
                     const overlay = document.getElementById('appInitOverlay');
