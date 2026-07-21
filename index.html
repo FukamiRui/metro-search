@@ -368,7 +368,7 @@
             </div>
 
             <div class="notice-text">
-                 Note: The very first load takes roughly 20-30 seconds because Python is computing thousands of
+                Note: The very first load takes roughly 20-30 seconds because Python is computing thousands of
                 transit nodes directly into RAM for blazing fast lookups later.
             </div>
         </div>
@@ -409,9 +409,9 @@
 
     <script>
         const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-        ? "http://localhost:8000" // For local
-        : "https://metro-search.onrender.com"; // For Deploy
-        
+            ? "http://localhost:8000" // For local
+            : "https://metro-search.onrender.com"; // For Deploy
+
 
         let currentSearchTime = "00:00:00";
         let timeHistory = [];
@@ -473,8 +473,15 @@
             );
         }
 
-        function initiateNewSearch() {
-            currentSearchTime = "00:00:00";
+        async function initiateNewSearch() {
+            try {
+                const res = await fetch(`${API_BASE}/current_time`);
+                const data = await res.json();
+                currentSearchTime = data.current_time; 
+            } catch (e) {
+                console.error("Failed to get Exact time, currently using Default time", e);
+                currentSearchTime = "00:00:00";
+            }
             timeHistory = [];
             fetchRoute();
         }
@@ -582,7 +589,7 @@
             setupNavEvents();
         }
 
-    
+
         function parseStationsFromItinerary(itinerary, originName, isDirect, headsign) {
             let stations = [];
             if (isDirect) {
@@ -602,14 +609,14 @@
         }
 
         function handleCardClick(cardElement, encodedItinerary, isDirect, encodedOrigin, encodedHeadsign) {
-           
+
             document.querySelectorAll('.train-card').forEach(c => { if (c !== cardElement) c.classList.remove('active'); });
             const isActive = cardElement.classList.toggle('active');
 
-      
+
             clearRouteVisuals();
 
-            
+
             if (isActive) {
                 const itinerary = decodeURIComponent(encodedItinerary);
                 const originName = decodeURIComponent(encodedOrigin);
@@ -621,7 +628,7 @@
                     const startName = orderedStations[0];
                     const endName = orderedStations[orderedStations.length - 1];
 
-                  
+
                     [
                         { name: startName, color: 'marker-green', label: '🏁 Start' },
                         { name: endName, color: 'marker-red', label: '🎯 Dest' }
@@ -640,7 +647,7 @@
                         }
                     });
 
-               
+
                     const startNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(startName.toLowerCase()));
                     const endNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(endName.toLowerCase()));
                     if (startNode && endNode) {
@@ -744,7 +751,7 @@
                             box.style.display = 'none';
                             if (inputId === 'startStation') { selectedLat = null; selectedLon = null; }
 
-                          
+
                             if (s.stop_lat && s.stop_lon) {
                                 map.setView([s.stop_lat, s.stop_lon], 15);
                                 if (clickMarker) map.removeLayer(clickMarker);

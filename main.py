@@ -17,7 +17,6 @@ from zoneinfo import ZoneInfo
 from datetime import datetime
 
 
-
    
 # In memorize all required datas at the first
 PROJECT_CACHE = {
@@ -295,3 +294,8 @@ async def get_all_stations(db: Session = Depends(get_db)):
         "status": "Success",
         "sample_stations": spatial_list
     }
+
+@app.get("/current_time")
+def get_current_time():
+    now = datetime.now(ZoneInfo("America/New_York"))
+    return {"current_time": now.strftime("%H:%M:%S")}
