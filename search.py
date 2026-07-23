@@ -64,10 +64,11 @@ def search_direct_cached(start_name: str, end_name: str, cache_data: dict, depar
     return {"status": "Success", "next_trains": direct_trains}
 
 def search_transfer_cached(start_station_name: str, end_station_name: str, cache_data: dict, departure_time_limit: str = "00:00:00"):
-    cache = load_cache_indexes(cache_data, end_station_name)
+    cache = load_cache_indexes(cache_data, start_station_name, end_station_name)
     if cache is None:
        return {"status": "Fail"}
 
+    
     raw_results = bfs_transfer_searching(
     start_station_name,
     departure_time_limit,
@@ -76,7 +77,7 @@ def search_transfer_cached(start_station_name: str, end_station_name: str, cache
     
     return format_bfs_results(raw_results) 
     
-def load_cache_indexes(cache_data, end_station_name):
+def load_cache_indexes(cache_data, start_station_name, end_station_name):
     stop_name_to_ids = cache_data["stop_name_to_ids"]
     stop_id_to_name = cache_data["stop_id_to_name"]
     station_departure_map = cache_data["station_departure_map"]
@@ -84,10 +85,9 @@ def load_cache_indexes(cache_data, end_station_name):
     trip_schedules = cache_data["trip_schedules"]
     trip_to_route = cache_data["trip_to_route"]
 
-  
-    if end_station_name not in stop_name_to_ids:
+    if start_station_name not in stop_name_to_ids or end_station_name not in stop_name_to_ids:
         return None
-
+    
     end_station_ids = set(stop_name_to_ids[end_station_name])
 
     return {
@@ -98,6 +98,7 @@ def load_cache_indexes(cache_data, end_station_name):
     "trip_schedules": trip_schedules,
     "trip_to_route": trip_to_route,
     "end_station_ids": end_station_ids,
+    
 }
 
 def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
@@ -110,8 +111,7 @@ def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
     trip_to_route = cache["trip_to_route"]
     end_station_ids = cache["end_station_ids"]
 
-    if start_station_name not in stop_name_to_ids:
-        return []
+    
 
     queue = deque([(start_station_name, departure_time_limit, [])])
     visited_stations = {start_station_name: departure_time_limit}
