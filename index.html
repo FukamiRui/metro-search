@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>NYC Subway Multimodal Finder</title>
+    <title>NYC Subway Searching Application</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -29,7 +29,6 @@
             gap: 16px;
         }
 
-        /* 隙間を少し広く */
         .map-side {
             flex: 1;
         }
@@ -83,13 +82,13 @@
         }
 
         .search-btn {
-            background-color: #007bff;
+            background-color: #001eff;
             color: white;
             flex: 2;
         }
 
         .gps-btn {
-            background-color: #28a745;
+            background-color: #00953e;
             color: white;
             flex: 1;
         }
@@ -361,7 +360,7 @@
             </div>
 
             <div class="status-steps">
-                <div id="step1" class="step active">🔄 1. Pinging local server on port 8000...</div>
+                <div id="step1" class="step active">⏳ 1. Pinging local server on port 8000...</div>
                 <div id="step2" class="step pending">⏳ 2. Indexing SQLite & GTFS Stop Tables...</div>
                 <div id="step3" class="step pending">⏳ 3. Generating Spatial Coordinates Map...</div>
                 <div id="step4" class="step pending">⏳ 4. Compiling Triplet Routes to Memory...</div>
@@ -374,12 +373,17 @@
         </div>
     </div>
 
-    <h1>🌍 NYC Subway Route Finder</h1>
+    <h1 class="title">----------NYC Subway Route Finder-----------</h1>
+    <style>
+        .title{
+            text-align: center;
+        }
+     </style>
 
     <div class="container">
         <div class="form-side">
             <div class="form-group">
-                <label>Origin Station (Or use Map/GPS)</label>
+                <label>Departure Station (Select OR use GPS clicking MAP ->)</label>
                 <input type="text" id="startStation" placeholder="Type a station name (e.g., Penn)..."
                     autocomplete="off">
                 <div id="startSuggest" class="suggest-box"></div>
@@ -393,7 +397,7 @@
 
             <div class="btn-flex">
                 <button id="searchRouteBtn" class="search-btn" onclick="initiateNewSearch()">Search Route</button>
-                <button id="gpsBtn" class="gps-btn" onclick="useGPS()">📡 Use GPS</button>
+                <button id="gpsBtn" class="gps-btn" onclick="useGPS()">Activate Current Location</button>
             </div>
 
             <div id="locationStatus" style="font-size: 12px; color: #666; font-style: italic; margin-top: 5px;"></div>
@@ -466,7 +470,7 @@
                     if (clickMarker) map.removeLayer(clickMarker);
                     clearRouteVisuals();
                     clickMarker = L.marker([selectedLat, selectedLon], { icon: createColorIcon('marker-green') }).addTo(map).bindPopup("Current Location (GPS)").openPopup();
-                    document.getElementById('startStation').value = `📡 GPS Location (${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)})`;
+                    document.getElementById('startStation').value = ` GPS Location (${selectedLat.toFixed(4)}, ${selectedLon.toFixed(4)})`;
                     statusDiv.innerText = "GPS coordinates parsed successfully.";
                 },
                 () => { statusDiv.innerText = "Failed to acquire GPS. Please manually click on the map."; }
@@ -630,8 +634,8 @@
 
 
                     [
-                        { name: startName, color: 'marker-green', label: '🏁 Start' },
-                        { name: endName, color: 'marker-red', label: '🎯 Dest' }
+                        { name: startName, color: 'marker-green', label: 'Start' },
+                        { name: endName, color: 'marker-red', label: 'Dest' }
                     ].forEach(point => {
                         const found = allStationsData.find(s =>
                             s.stop_name.toLowerCase().includes(point.name.toLowerCase()) ||
