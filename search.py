@@ -64,6 +64,19 @@ def search_direct_cached(start_name: str, end_name: str, cache_data: dict, depar
     return {"status": "Success", "next_trains": direct_trains}
 
 def search_transfer_cached(start_station_name: str, end_station_name: str, cache_data: dict, departure_time_limit: str = "00:00:00"):
+    cache = load_cache_indexes(cache_data, end_station_name)
+    if cache is None:
+       return {"status": "Fail"}
+
+    raw_results = bfs_transfer_searching(
+    start_station_name,
+    departure_time_limit,
+    cache,
+    )
+    
+    return format_bfs_results(raw_results) 
+    
+def load_cache_indexes(cache_data, end_station_name):
     stop_name_to_ids = cache_data["stop_name_to_ids"]
     stop_id_to_name = cache_data["stop_id_to_name"]
     station_departure_map = cache_data["station_departure_map"]
@@ -71,10 +84,35 @@ def search_transfer_cached(start_station_name: str, end_station_name: str, cache
     trip_schedules = cache_data["trip_schedules"]
     trip_to_route = cache_data["trip_to_route"]
 
-    if start_station_name not in stop_name_to_ids or end_station_name not in stop_name_to_ids:
-        return {"status": "Fail", "message": "Origin or Destination station name not recognized in cache."}
+  
+    if end_station_name not in stop_name_to_ids:
+        return None
 
     end_station_ids = set(stop_name_to_ids[end_station_name])
+
+    return {
+    "stop_name_to_ids": stop_name_to_ids,
+    "stop_id_to_name": stop_id_to_name,
+    "station_departure_map": station_departure_map,
+    "station_departure_times_only": station_departure_times_only,
+    "trip_schedules": trip_schedules,
+    "trip_to_route": trip_to_route,
+    "end_station_ids": end_station_ids,
+}
+
+def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
+    
+    stop_name_to_ids = cache["stop_name_to_ids"]
+    stop_id_to_name = cache["stop_id_to_name"]
+    station_departure_map = cache["station_departure_map"]
+    station_departure_times_only = cache["station_departure_times_only"]
+    trip_schedules = cache["trip_schedules"]
+    trip_to_route = cache["trip_to_route"]
+    end_station_ids = cache["end_station_ids"]
+
+    if start_station_name not in stop_name_to_ids:
+        return []
+
     queue = deque([(start_station_name, departure_time_limit, [])])
     visited_stations = {start_station_name: departure_time_limit}
     results = []
@@ -117,6 +155,9 @@ def search_transfer_cached(start_station_name: str, end_station_name: str, cache
                     if next_s_name and (next_s_name not in visited_stations or visited_stations[next_s_name] > arr_time):
                         visited_stations[next_s_name] = arr_time
                         queue.append((next_s_name, arr_time, path + [{"route_id": trip_to_route.get(trip_id), "board_station": current_station, "getoff_station": next_s_name, "departure_time": dep["departure_time"], "arrival_time": arr_time}]))
+    return results
+
+def format_bfs_results(results):
     return {"status": "Success", "results": sorted(results, key=lambda x: x["real_arrival_time"])}
 
 def calculate_nearest_station(user_lat: float, user_lon: float, spatial_cache: list) -> str:
@@ -199,12 +240,15 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
 
     return {"status": "Success", "results": formatted_results}
 
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------
 def search_transfer_db(db: Session, start_station_name: str, end_station_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
   
     direct_results = search_direct_db(db, start_station_name, end_station_name, PROJECT_CACHE, departure_time_limit)
     if direct_results.get("status") == "Success" and len(direct_results["results"]) > 0:
         return direct_results
-
+    
     stop_name_to_ids = PROJECT_CACHE["stop_name_to_ids"]
     stop_id_to_name = PROJECT_CACHE["stop_id_to_name"]
 
@@ -213,7 +257,15 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
 
     if not start_ids or not end_ids:
         return {"status": "Success", "results": []}
+    
+    first_legs = fetch_first_legs(db, start_ids, departure_time_limit)
+    second_legs = fetch_second_legs(db, end_ids, departure_time_limit)
+    raw_results = merge_routes(first_legs, second_legs, start_station_name, end_station_name, stop_id_to_name)
 
+    return format_results(raw_results)
+
+MAX_FIRST_LEGS=1000
+def fetch_first_legs(db: Session, start_ids: list[str], departure_time_limit: str) -> list:
     t1_b = aliased(models.StopTime)
     t1_a = aliased(models.StopTime)
     tr1 = aliased(models.Trip)
@@ -228,13 +280,18 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
             t1_b.departure_time >= departure_time_limit
         )
         .order_by(t1_b.departure_time.asc())
-        .limit(1000)
+        .limit(MAX_FIRST_LEGS)
         .all()
     )
+    return first_legs
 
+SECOND_LEG_BATCH_SIZE = 5000
+def fetch_second_legs(db: Session, end_ids: list[str], departure_time_limit: str) -> list:
     t2_b = aliased(models.StopTime)
     t2_a = aliased(models.StopTime)
     tr2 = aliased(models.Trip)
+    
+    
 
     second_legs = (
         db.query(t2_b, t2_a, tr2)
@@ -246,9 +303,11 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
             t2_b.departure_time >= departure_time_limit
         )
         .order_by(t2_a.arrival_time.asc())
-        .yield_per(5000)
+        .yield_per(SECOND_LEG_BATCH_SIZE)
     )
+    return second_legs
 
+def merge_routes(first_legs, second_legs, start_station_name, end_station_name, stop_id_to_name) -> list:
     second_leg_map = {}
     for t2_b_obj, t2_a_obj, tr2_obj in second_legs:
         board_name = stop_id_to_name.get(t2_b_obj.stop_id)
@@ -290,7 +349,9 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
 
 
     raw_results.sort(key=lambda x: x["real_arrival_time"])
+    return raw_results
 
+def format_results(raw_results):
 
     formatted_results = []
     seen_times = set()
