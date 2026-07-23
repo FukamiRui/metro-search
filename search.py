@@ -4,6 +4,11 @@ import bisect
 from sqlalchemy.orm import Session, aliased
 import models
 
+# Direct for [search_direct_db(), fetch_first_legs()]
+MAX_FIRST_LEGS=1000
+# Transfer for [fetch_second_legs()]
+SECOND_LEG_BATCH_SIZE = 5000
+
 def search_direct_cached(start_name: str, end_name: str, cache_data: dict, departure_time_limit: str = "00:00:00"):
     departure_time_limit = str(departure_time_limit).strip()
     
@@ -119,9 +124,11 @@ def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
 
     while queue:
         current_station, current_time, path = queue.popleft()
-        if len(path) >= 3: continue
+        if len(path) >= 3: 
+            continue
 
         curr_station_ids = stop_name_to_ids.get(current_station, [])
+
         for sid in curr_station_ids:
             departures = station_departure_map.get(sid, [])
             dep_times = station_departure_times_only.get(sid, [])
@@ -131,11 +138,14 @@ def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
             for dep in departures[start_idx : start_idx + 5]:
                 trip_id = dep["trip_id"]
                 schedules = trip_schedules.get(trip_id, [])
+
                 for sch in schedules:
-                    if sch["stop_sequence"] <= dep["stop_sequence"]: continue
+                    if sch["stop_sequence"] <= dep["stop_sequence"]: 
+                        continue
                     
                     next_sid = sch["stop_id"]
                     arr_time = sch["arrival_time"]
+
                     if not arr_time: continue
 
                     if arr_time < dep["departure_time"]:
@@ -147,14 +157,22 @@ def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
                         results.append({
                             "real_departure_time": real_dep_time, 
                             "real_arrival_time": arr_time,
-                            "path": path + [{"route_id": trip_to_route.get(trip_id), "board_station": current_station, "getoff_station": stop_id_to_name.get(next_sid), "departure_time": dep["departure_time"], "arrival_time": arr_time}]
+                            "path": path + [{"route_id": trip_to_route.get(trip_id), 
+                                             "board_station": current_station, 
+                                             "getoff_station": stop_id_to_name.get(next_sid), 
+                                             "departure_time": dep["departure_time"], 
+                                             "arrival_time": arr_time}]
                         })
                         continue
 
                     next_s_name = stop_id_to_name.get(next_sid)
                     if next_s_name and (next_s_name not in visited_stations or visited_stations[next_s_name] > arr_time):
                         visited_stations[next_s_name] = arr_time
-                        queue.append((next_s_name, arr_time, path + [{"route_id": trip_to_route.get(trip_id), "board_station": current_station, "getoff_station": next_s_name, "departure_time": dep["departure_time"], "arrival_time": arr_time}]))
+                        queue.append((next_s_name, arr_time, path + [{"route_id": trip_to_route.get(trip_id), 
+                                                                      "board_station": current_station, 
+                                                                      "getoff_station": next_s_name, 
+                                                                      "departure_time": dep["departure_time"], 
+                                                                      "arrival_time": arr_time}]))
     return results
 
 def format_bfs_results(results):
@@ -190,8 +208,8 @@ def calculate_nearest_station(user_lat: float, user_lon: float, spatial_cache: l
             if distance < min_distance_km:
                 min_distance_km = distance
                 best_station = station["stop_name"]
-        except:
-            continue
+        except Exception as value_error:
+           raise ValueError( f"Error Occurred: {value_error}") from value_error
             
     return best_station
 
@@ -218,7 +236,7 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
             t_board.departure_time >= departure_time_limit
         )
         .order_by(t_alight.arrival_time.asc())
-        .limit(1000)
+        .limit(MAX_FIRST_LEGS)
         .all()
     )
 
@@ -239,8 +257,6 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
         })
 
     return {"status": "Success", "results": formatted_results}
-
-
 
 #-----------------------------------------------------------------------------------------------------------------------------------
 def search_transfer_db(db: Session, start_station_name: str, end_station_name: str, PROJECT_CACHE: dict, departure_time_limit: str):
@@ -264,7 +280,7 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
 
     return format_results(raw_results)
 
-MAX_FIRST_LEGS=1000
+
 def fetch_first_legs(db: Session, start_ids: list[str], departure_time_limit: str) -> list:
     t1_b = aliased(models.StopTime)
     t1_a = aliased(models.StopTime)
@@ -285,7 +301,7 @@ def fetch_first_legs(db: Session, start_ids: list[str], departure_time_limit: st
     )
     return first_legs
 
-SECOND_LEG_BATCH_SIZE = 5000
+
 def fetch_second_legs(db: Session, end_ids: list[str], departure_time_limit: str) -> list:
     t2_b = aliased(models.StopTime)
     t2_a = aliased(models.StopTime)
