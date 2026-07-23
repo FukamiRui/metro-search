@@ -1,0 +1,4 @@
+[run]
+omit =
+    import-metro.py
+    models_backup.py
