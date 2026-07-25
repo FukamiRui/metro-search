@@ -89,13 +89,14 @@ TOTAL    522     66    87%
 ├── docker-compose.yml
 └── requirements.txt
 
-...
-,,,
+```
 ---
 ## 🏗️ Architecture
 
 <details>
 <summary><strong>System Architecture</strong></summary>
+
+```text
 
 [ Client / User Request ]
          │
@@ -145,7 +146,9 @@ TOTAL    522     66    87%
                               ▼
                [ JSON Response Output ]
 </detail>
-
+```
+--- 
+```text
 
 ##  🛠 Installation & Local Setup
 # 1. Clone the repository
@@ -165,7 +168,9 @@ pytest
 # 5. Start development server
 gunicorn main:app -w 1 -k uvicorn.workers.UvicornWorker --timeout 300 --bind 0.0.0.0:$PORT
 
+```
 ---
+```text
 
 ## Challenges
 
@@ -187,6 +192,9 @@ Although an in-memory database can provide faster lookups after loading, it requ
 
 - Execution time: 0.79 s
 - Peak memory usage: 3.03 MB
+
+```
+---
 
 ## 🔮 Future Improvements
 GTFS-Realtime Integration: Fetch live delay and service disruption feeds via MTA APIs.
