@@ -39,6 +39,17 @@ A high-performance subway route search application using GTFS (General Transit F
 | **DevOps & CI/CD**     | Docker, Docker Compose, GitHub Actions  |
 
 ---
+## Dataset
+
+This application processes NYC Subway GTFS data:
+
+- 563,000+ stop-time schedule records
+- 20,000+ trip records
+- 1,400+ station records
+- 30 subway routes
+
+The data is imported into PostgreSQL and accessed through SQLAlchemy ORM with optimized queries.
+---
 
 ## 🚀 Performance Optimization & Complexity
 
@@ -70,6 +81,13 @@ TOTAL    522     66    87%
 ├── .github/
 │   └── workflows/
 │       └── test.yml       # GitHub Actions CI Workflow
+├── data/
+│   └── gtfs/
+│       ├── routes.txt
+│       ├── stops.txt
+│       ├── trips.txt
+│       └── stop_times.txt
+
 ├── models.py              # SQLAlchemy DB Models
 ├── database.py            # Database Connection & Session Management
 ├
