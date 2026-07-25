@@ -1,1 +1,192 @@
-# portfolio-metro-search
+# 🚇 NYC Subway Search API
+[![CI Pipeline](https://github.com/FukamiRui/metro-search/actions/workflows/python-app.yml/badge.svg)](https://github.com/FukamiRui/metro-search/actions/workflows/ci.yml)
+![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen)
+
+
+A high-performance subway route search application using GTFS (General Transit Feed Specification) data for the New York City Metro system. Built with **FastAPI**, **SQLAlchemy**, and **Sliding Window / Binary Search algorithms**.
+
+---
+
+## 🌐 Live Demo
+
+* **URL:** [https://metro-search.onrender.com/](https://metro-search.onrender.com/)
+> ⚠️ **Note:** Hosted on Render Free Tier. It may take 30–60 seconds for the initial cold start.
+
+---
+
+## ⚡ Key Features
+
+* **O(log N) Direct Route Search:** 
+ - Fast binary search ("bisect") implementation for station departures over GTFS schedule data.
+* **BFS Transfer Route Search:** 
+ - Multi-leg transfer route finding constrained to maximum 3-step search depth to maintain minimal runtime latency.
+* **Haversine Nearest Station Calculation:** 
+ - Real-time spatial query calculating closest subway stops from user coordinates ($O(N)$ space / time efficiency).
+* **Robust Error Handling:** 
+ - Custom exception handling ensuring high availability and zero unhandled server crashes (500 errors).
+
+---
+
+## 🛠 Tech Stack
+
+|       Category         |            Technologies                 |
+|    --------------      |        --------------------             |
+| **Language**           | Python 3.11                             |
+| **Backend Framework**  | FastAPI, Uvicorn, Gunicorn              |
+| **Database & ORM**     | PostgreSQL, SQLite, SQLAlchemy (ORM)    |
+| **Frontend**           | HTML5, CSS3, JavaScript                 |
+| **Testing & Quality**  | Pytest (Unit & Integration), Pytest-Cov |
+| **DevOps & CI/CD**     | Docker, Docker Compose, GitHub Actions  |
+
+---
+
+## 🚀 Performance Optimization & Complexity
+
+| Algorithm / Feature | Time Complexity | Space Complexity | Optimization Strategy |
+| :--- | :--- | :--- | :--- |
+| **Direct Route Search** | O(log N + M) | O(M) | Binary search (bisect_left) on cached departure times |
+| **Transfer Search (BFS)** | O(V + E) | O(V) | BFS with visited-state pruning and maximum transfer depth |
+| **Nearest Station** | O(N) | O(1) | Haversine distance over cached station coordinates |
+
+---
+
+## 🧪 Testing & Continuous Integration (CI)
+
+* **Code Coverage:** **87%** 
+ - (Excluding non-core data migration scripts via `.coveragerc`)
+* **Automated CI Pipeline:** 
+ - GitHub Actions automatically runs `pytest` and coverage checks on every Push and Pull Request.
+
+```text
+Stmts   Miss  Cover
+-------------------
+TOTAL    522     66    87%
+
+
+--- 
+
+## 📂 Project Structure
+
+├── .github/
+│   └── workflows/
+│       └── test.yml       # GitHub Actions CI Workflow
+├── models.py              # SQLAlchemy DB Models
+├── database.py            # Database Connection & Session Management
+├
+├── main.py                     # FastAPI entry point (routes & cache initialization)
+│   ├── /search_route           # Direct & transfer route search API
+│   ├── /check_stations         # Nearest station lookup
+│   └── calculate_nearest_station()
+│
+├── search.py                   # Core search algorithms
+│   ├── Direct Search           # Binary search over cached schedules & indexed SQL queries
+│   ├── Transfer Search         # Depth-bounded BFS
+│   └── Nearest Station         # Haversine distance calculation
+|
+├── test_api.py            # Pytest Test Cases
+├── .coveragerc            # Coverage Exclusions Configuration
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
+
+---
+## 🏗️ Architecture
+
+<details>
+<summary><strong>System Architecture</strong></summary>
+
+[ Client / User Request ]
+         │
+         ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │                   FastAPI Application                   │
+ │                        (main.py)                        │
+ └────────────────────────────┬────────────────────────────┘
+                              │
+          ┌───────────────────┴───────────────────┐
+          │ Lifecycle Startup Cache (In-Memory)  │
+          │  - stop_name_to_ids                   │
+          │  - stations_spatial_data              │
+          └───────────────────┬───────────────────┘
+                              │
+                  Is GPS / Nearest Request?
+                   ├── YES ──> [ calculate_nearest_station() ]
+                   │              └─ Haversine distance calculation
+                   ▼
+       [ /search_route Endpoint ]
+                  │
+        ┌─────────┴─────────────────────────┐
+        │                                   │
+        ▼                                   ▼
+ [ search_direct_db() ]            [ search_transfer_db() ]
+   (search.py)                       (search.py)
+        │                                   │
+        │  SQLAlchemy ORM (Session)         │  SQLAlchemy ORM (Session)
+        │  Execution                        │  Execution
+        ▼                                   ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │                    SQL Database                         │
+ │        (PostgreSQL / SQLite via models.py)              │
+ │                                                         │
+ │  • t_board JOIN t_alight JOIN trip (Direct)             │
+ │  • 1st Leg Query  ──> FETCH Limit 1000                  │
+ │  • 2nd Leg Query  ──> STREAM yield_per 5000             │
+ └────────────────────────────┬────────────────────────────┘
+                              │
+                              │ Query Results Returned
+                              ▼
+            [ Merge & Deduplicate (FastAPI / search.py) ]
+            - In-memory Hash Join (1st Leg Arrival <= 2nd Leg Departure)
+            - Deduplicate by (dep_time, route_id)
+            - Sort chronologically
+                              │
+                              ▼
+               [ JSON Response Output ]
+</detail>
+
+
+##  🛠 Installation & Local Setup
+# 1. Clone the repository
+git clone [https://github.com/FukamiRui/metro-search.git](https://github.com/FukamiRui/metro-search.git)
+cd metro-search
+
+# 2. Set up virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run tests & coverage
+pytest 
+
+# 5. Start development server
+gunicorn main:app -w 1 -k uvicorn.workers.UvicornWorker --timeout 300 --bind 0.0.0.0:$PORT
+
+---
+
+## Challenges
+
+### Trade-off
+I chose PostgreSQL over an in-memory data store.
+
+The benchmark below measures the time and memory required to load the entire dataset into the application.
+
+Although an in-memory database can provide faster lookups after loading, it requires loading all data into memory first. For this project, PostgreSQL achieved much faster data loading and significantly lower memory usage, so I prioritized startup performance and memory efficiency over the potential benefit of faster in-memory searches.
+
+#### Benchmark (Loading the entire dataset)
+
+**In-memory database**
+
+- Execution time: 205.96 s
+- Peak memory usage: 381.87 MB
+
+**PostgreSQL**
+
+- Execution time: 0.79 s
+- Peak memory usage: 3.03 MB
+
+## 🔮 Future Improvements
+GTFS-Realtime Integration: Fetch live delay and service disruption feeds via MTA APIs.
+Redis Caching Layer: Implement Redis to cache frequent search results and reduce database load.
+Map UI Enhancement: Interactive map visualization using Leaflet.js / Mapbox.
