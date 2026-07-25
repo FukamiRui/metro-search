@@ -62,9 +62,9 @@ Stmts   Miss  Cover
 -------------------
 TOTAL    522     66    87%
 
-
+.
 --- 
-
+```text
 ## 📂 Project Structure
 
 ├── .github/
@@ -89,6 +89,8 @@ TOTAL    522     66    87%
 ├── docker-compose.yml
 └── requirements.txt
 
+...
+,,,
 ---
 ## 🏗️ Architecture
 
