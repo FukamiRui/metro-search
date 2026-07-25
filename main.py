@@ -16,6 +16,14 @@ models.Base.metadata.create_all(bind=engine)
 from zoneinfo import ZoneInfo
 from datetime import datetime
 
+import psutil
+
+process = psutil.Process(os.getpid())
+
+start = time.perf_counter()
+
+
+
 
    
 # In memorize all required datas at the first
@@ -63,6 +71,13 @@ async def lifespan(app: FastAPI):
         current_memory, peak_memory = tracemalloc.get_traced_memory()
         end_time = time.time()
         tracemalloc.stop()
+
+        elapsed = time.perf_counter() - start
+
+        print(f"Elapsed: {elapsed:.3f}s")
+        print(f"RSS: {process.memory_info().rss/1024**2:.2f} MB")
+        print(f"CPU user time: {process.cpu_times().user:.3f}s")
+        print(f"CPU system time: {process.cpu_times().system:.3f}s")
 
         print(f" Time taking: {end_time - start_time:.2f} sec")
         print(f" Current Memory Usage: {current_memory / 10**6:.2f} MB")
@@ -117,7 +132,7 @@ def calculate_nearest_station(user_lat: float, user_lon: float) -> str:
     if not stations_data:
         return None
     
-    # 2. Culculation for distance with lan and lon
+    # 2. Calculation for distance with lan and lon
     best_station = None
     min_distance = float('inf')
     lat_to_km = 111.0
@@ -140,7 +155,7 @@ def calculate_nearest_station(user_lat: float, user_lon: float) -> str:
         if distance_sq < min_distance:
             min_distance = distance_sq
             best_station = station["stop_name"]
-    if min_distance >= 2:
+    if min_distance >= 2 ** 2:
          return None  
     return best_station
 
@@ -181,7 +196,7 @@ async def run_search_route(
     elif not end_stop_name or end_stop_name not in PROJECT_CACHE["stop_name_to_ids"] :
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Destination name of GPS coordinates required"
+            detail="Destination name or GPS coordinates required"
         )
     
     
@@ -299,3 +314,5 @@ async def get_all_stations(db: Session = Depends(get_db)):
 def get_current_time():
     now = datetime.now(ZoneInfo("America/New_York"))
     return {"current_time": now.strftime("%H:%M:%S")}
+
+

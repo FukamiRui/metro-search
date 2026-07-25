@@ -2,15 +2,19 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
+from pathlib import Path
+
+
 
 # 1. Load environment variables and initialize database connection
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
-print(f"DEBUG: The URL is -> {os.getenv('DATABASE_URL')}")
+BASE_DIR = Path(__file__).resolve().parent
+GTFS_DIR = BASE_DIR / "data" / "gtfs"
 
-def import_csv_to_db(file_name, table_name, use_cols):
+def import_csv_to_db(file_name: Path, table_name: str, use_cols:list[str]):
     """
     Reads a GTFS CSV (TXT) file efficiently using Pandas 
     and bulk-inserts the data into the PostgreSQL database.
@@ -18,7 +22,7 @@ def import_csv_to_db(file_name, table_name, use_cols):
     print(f"[PROCESS] Importing {file_name} into '{table_name}' table...")
     
     # Check if the target file exists
-    if not os.path.exists(file_name):
+    if not file_name.exists():
         print(f"❌ ERROR: File '{file_name}' not found.")
         return
 
@@ -38,28 +42,28 @@ if __name__ == "__main__":
     
     # ① Import routes.txt
     import_csv_to_db(
-        file_name="routes.txt",
+        file_name=GTFS_DIR / "routes.txt",
         table_name="routes",
         use_cols=["route_id", "route_short_name", "route_long_name", "route_type"]
     )
     
     # ② Import stops.txt
     import_csv_to_db(
-        file_name="stops.txt",
+        file_name=GTFS_DIR / "stops.txt",
         table_name="stops",
         use_cols=["stop_id", "stop_name", "stop_lat", "stop_lon"]
     )
     
     # ③ Import trips.txt
     import_csv_to_db(
-        file_name="trips.txt",
+        file_name=GTFS_DIR / "trips.txt",
         table_name="trips",
         use_cols=["trip_id", "route_id", "service_id", "trip_headsign"]
     )
     
     # ④ Import stop_times.txt (This is the largest dataset)
     import_csv_to_db(
-        file_name="stop_times.txt",
+        file_name=GTFS_DIR / "stop_times.txt",
         table_name="stop_times",
         use_cols=["trip_id", "stop_id", "arrival_time", "departure_time", "stop_sequence"]
     )

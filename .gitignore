@@ -1,15 +1,28 @@
+# Environment
 .env
-__pycache__/
-*.pyc
-.venv/
-.DS_Store
-.coverage
-*.png
-.coverage
-data/
-*.zip
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# macOS
+.DS_Store
+
+# Testing
+.coverage
+.pytest_cache/
+
+# Database
 *.db
 *.sqlite
 *.sqlite3
-.txt
+postgres_data/
+
+# Data files
+data/
+*.zip
+gtfs/*.txt
+
+# Generated files
+*.png
