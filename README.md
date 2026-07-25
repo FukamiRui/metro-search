@@ -145,8 +145,9 @@ TOTAL    522     66    87%
                               │
                               ▼
                [ JSON Response Output ]
-</detail>
 ```
+</details>
+
 --- 
 ```text
 
