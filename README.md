@@ -69,9 +69,9 @@ The data is imported into PostgreSQL and accessed through SQLAlchemy ORM with op
  - GitHub Actions automatically runs `pytest` and coverage checks on every Push and Pull Request.
 
 ```text
-Stmts   Miss  Cover
--------------------
-TOTAL    522     66    87%
+        Stmts   Miss  Cover
+---------------------------
+TOTAL    530     66    88%
 
 .
 --- 
