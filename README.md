@@ -80,24 +80,24 @@ TOTAL    522     66    87%
 
 ├── .github/
 │   └── workflows/
-│       └── test.yml       # GitHub Actions CI Workflow
+│       └── python-app.yml       # GitHub Actions CI Workflow
 ├── data/
 │   └── gtfs/
 │       ├── routes.txt
 │       ├── stops.txt
 │       ├── trips.txt
 │       └── stop_times.txt
-
+│  
 ├── models.py              # SQLAlchemy DB Models
 ├── database.py            # Database Connection & Session Management
-├
+│  
 ├── main.py                     # FastAPI entry point (routes & cache initialization)
 │   ├── /search_route           # Direct & transfer route search API
-│   ├── /check_stations         # Nearest station lookup
-│   └── calculate_nearest_station()
+│   ├── /check_stations        # Nearest station lookup
+│   └── calculate_nearest_station
 │
 ├── search.py                   # Core search algorithms
-│   ├── Direct Search           # Binary search over cached schedules & indexed SQL queries
+│   ├── Direct Search          # Binary search over cached schedules & indexed SQL queries
 │   ├── Transfer Search         # Depth-bounded BFS
 │   └── Nearest Station         # Haversine distance calculation
 |
@@ -105,6 +105,7 @@ TOTAL    522     66    87%
 ├── .coveragerc            # Coverage Exclusions Configuration
 ├── Dockerfile
 ├── docker-compose.yml
+├── .dockerignore
 └── requirements.txt
 
 ```
