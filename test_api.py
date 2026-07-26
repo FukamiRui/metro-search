@@ -70,7 +70,7 @@ def test_search_nearest_station(lat, lon, expected_station):
 
 @pytest.mark.parametrize("start, end, departure_time", [
     ("Grand Central-42 St", "47-50 Sts-Rockefeller Ctr", "00:37:30"),
-    ("18 Av", "1 Av", "01:28:30")
+    ("161 St-Yankee Stadium", "Grand Central-42 St", "02:10:30")
 ])
 def test_time(db_session, start, end, departure_time):
     res = search_transfer_db(db_session, start, end, PROJECT_CACHE, departure_time_limit=departure_time)
