@@ -47,14 +47,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Create database tables
-        run: |
-          python -c "import models; from database import engine; models.Base.metadata.create_all(bind=engine)"
-
-      - name: Import GTFS data
+      - name: Create Tables & Import GTFS data
         run: |
           python import-metro.py
 
       - name: Run tests
         run: |
-          pytest
+          pytest 
