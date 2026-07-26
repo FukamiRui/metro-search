@@ -31,7 +31,7 @@ A high-performance subway route search application using GTFS (General Transit F
 
 |       Category         |            Technologies                 |
 |    --------------      |        --------------------             |
-| **Language**           | Python 3.11                             |
+| **Language**           | Python 3.14                             |
 | **Backend Framework**  | FastAPI, Uvicorn, Gunicorn              |
 | **Database & ORM**     | PostgreSQL, SQLite, SQLAlchemy (ORM)    |
 | **Frontend**           | HTML5, CSS3, JavaScript                 |
@@ -75,7 +75,7 @@ TOTAL    530     66    88%
 
 .
 --- 
-```text
+```
 ## 📂 Project Structure
 
 ├── .github/
@@ -110,6 +110,7 @@ TOTAL    530     66    88%
 
 ```
 ---
+```
 ## 🏗️ Architecture
 
 <details>
@@ -166,16 +167,15 @@ TOTAL    530     66    88%
                [ JSON Response Output ]
 ```
 </details>
-```
 --- 
-
+```
 
 ##  🛠 Installation & Local Setup
-# 1. Clone the repository
+## 1. Clone the repository
 git clone [https://github.com/FukamiRui/metro-search.git](https://github.com/FukamiRui/metro-search.git)
 cd metro-search
 
-#　2.　Create Environment Variables
+##　2.　Create Environment Variables
 Create a .env file in the project root directory.
 You can copy the example configuration:
 
@@ -183,7 +183,7 @@ cp .env.example .env
 
 Update the values in .env:
 
-# (Example script) env
+## (Example script) env
 
 // PostgreSQL Configuration //
 POSTGRES_USER=your_user
@@ -198,7 +198,7 @@ Note: Replace the placeholder values with your own local database credentials.
 Do not commit the .env file or expose database credentials publicly.
 
 
-# 3. Run the Application with Docker Compose
+## 3. Run the Application with Docker Compose
 
 docker compose up --build
 
@@ -209,16 +209,16 @@ Swagger API documentation:
 http://localhost:8000/docs
 
 
-# 4. Run Tests
-
+## 4. Run Tests
+```
 docker compose exec app pytest
-
+```
 
 ```
 ---
 ```
 
-### Trade-off
+## Trade-off
 I chose PostgreSQL over an in-memory data store.
 
 The benchmark below measures the time and memory required to load the entire dataset into the application.
