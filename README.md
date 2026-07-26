@@ -116,7 +116,7 @@ TOTAL    530     66    88%
 <details>
 <summary><strong>System Architecture</strong></summary>
 
-
+```text
 
 [ Client / User Request ]
          │
@@ -165,6 +165,7 @@ TOTAL    530     66    88%
                               │
                               ▼
                [ JSON Response Output ]
+
 ```
 </details>
 --- 
