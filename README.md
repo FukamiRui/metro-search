@@ -171,7 +171,6 @@ TOTAL    530     66    88%
 ```
 </details>
 --- 
-```
 
 ##  🛠 Installation & Local Setup
 ## 1. Clone the repository
