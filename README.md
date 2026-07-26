@@ -78,6 +78,8 @@ TOTAL    530     66    88%
 ```
 ## 📂 Project Structure
 
+```plaintext
+
 ├── .github/
 │   └── workflows/
 │       └── python-app.yml       # GitHub Actions CI Workflow
