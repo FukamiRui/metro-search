@@ -178,6 +178,7 @@ def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
 def format_bfs_results(results):
     return {"status": "Success", "results": sorted(results, key=lambda x: x["real_arrival_time"])}
 
+#Haversine formula to calculate distance between two coordinates
 def calculate_nearest_station(user_lat: float, user_lon: float, spatial_cache: list) -> str:
     best_station = None
     min_distance_km = float('inf')
