@@ -115,7 +115,7 @@ TOTAL    522     66    87%
 <details>
 <summary><strong>System Architecture</strong></summary>
 
-```text
+
 
 [ Client / User Request ]
          │
@@ -168,7 +168,7 @@ TOTAL    522     66    87%
 </details>
 ```
 --- 
-```text
+
 
 ##  🛠 Installation & Local Setup
 # 1. Clone the repository
