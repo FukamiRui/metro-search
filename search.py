@@ -75,10 +75,10 @@ def search_transfer_cached(start_station_name: str, end_station_name: str, cache
 
     
     raw_results = bfs_transfer_searching(
-    start_station_name,
-    departure_time_limit,
-    cache,
-    )
+                                       start_station_name,
+                                       departure_time_limit,
+                                       cache,
+                                       )
     
     return format_bfs_results(raw_results) 
     
@@ -90,10 +90,16 @@ def load_cache_indexes(cache_data, start_station_name, end_station_name):
     trip_schedules = cache_data["trip_schedules"]
     trip_to_route = cache_data["trip_to_route"]
 
-    if start_station_name not in stop_name_to_ids or end_station_name not in stop_name_to_ids:
+    end_station_ids = set(stop_name_to_ids[end_station_name])
+
+    if start_station_name not in stop_name_to_ids:
         return None
     
-    end_station_ids = set(stop_name_to_ids[end_station_name])
+    if end_station_name not in stop_name_to_ids:
+        return None
+    
+    
+    
 
     return {
     "stop_name_to_ids": stop_name_to_ids,
@@ -119,7 +125,7 @@ def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
     
 
     queue = deque([(start_station_name, departure_time_limit, [])])
-    visited_stations = {start_station_name: departure_time_limit}
+    bfs_visited_stations = {start_station_name: departure_time_limit}
     results = []
 
     while queue:
@@ -135,43 +141,45 @@ def bfs_transfer_searching(start_station_name, departure_time_limit, cache):
             
             start_idx = bisect.bisect_left(dep_times, current_time)
         
-            for dep in departures[start_idx : start_idx + 5]:
-                trip_id = dep["trip_id"]
+            for dep_station in departures[start_idx : start_idx + 5]:
+                trip_id = dep_station["trip_id"]
                 schedules = trip_schedules.get(trip_id, [])
 
-                for sch in schedules:
-                    if sch["stop_sequence"] <= dep["stop_sequence"]: 
+                for time_from_schedule in schedules:
+                    if time_from_schedule["stop_sequence"] <= dep_station["stop_sequence"]: 
                         continue
                     
-                    next_sid = sch["stop_id"]
-                    arr_time = sch["arrival_time"]
+                    next_station_id = time_from_schedule["stop_id"]
+                    arr_time = time_from_schedule["arrival_time"]
 
-                    if not arr_time: continue
-
-                    if arr_time < dep["departure_time"]:
+                    if not arr_time: 
                         continue
 
-                    if next_sid in end_station_ids:
-                        real_dep_time = path[0]["departure_time"] if path else dep["departure_time"]
+                    if arr_time < dep_station["departure_time"]:
+                        continue
+
+                    if next_station_id in end_station_ids:
+                        real_dep_time = path[0]["departure_time"] if path else dep_station["departure_time"]
                         
                         results.append({
                             "real_departure_time": real_dep_time, 
                             "real_arrival_time": arr_time,
                             "path": path + [{"route_id": trip_to_route.get(trip_id), 
                                              "board_station": current_station, 
-                                             "getoff_station": stop_id_to_name.get(next_sid), 
-                                             "departure_time": dep["departure_time"], 
+                                             "getoff_station": stop_id_to_name.get(next_station_id), 
+                                             "departure_time": dep_station["departure_time"], 
                                              "arrival_time": arr_time}]
                         })
                         continue
 
-                    next_s_name = stop_id_to_name.get(next_sid)
-                    if next_s_name and (next_s_name not in visited_stations or visited_stations[next_s_name] > arr_time):
-                        visited_stations[next_s_name] = arr_time
+                    next_s_name = stop_id_to_name.get(next_station_id)
+
+                    if next_s_name and (next_s_name not in bfs_visited_stations or bfs_visited_stations[next_s_name] > arr_time):
+                        bfs_visited_stations[next_s_name] = arr_time
                         queue.append((next_s_name, arr_time, path + [{"route_id": trip_to_route.get(trip_id), 
                                                                       "board_station": current_station, 
                                                                       "getoff_station": next_s_name, 
-                                                                      "departure_time": dep["departure_time"], 
+                                                                      "departure_time": dep_station["departure_time"], 
                                                                       "arrival_time": arr_time}]))
     return results
 
@@ -198,10 +206,10 @@ def calculate_nearest_station(user_lat: float, user_lon: float, spatial_cache: l
             st_lat_rad = math.radians(st_lat)
             st_lon_rad = math.radians(st_lon)
             
-            dlat = st_lat_rad - user_lat_rad
-            dlon = st_lon_rad - user_lon_rad
+            destination_lat = st_lat_rad - user_lat_rad
+            destination_lon = st_lon_rad - user_lon_rad
             
-            a = math.sin(dlat / 2)**2 + math.cos(user_lat_rad) * math.cos(st_lat_rad) * math.sin(dlon / 2)**2
+            a = math.sin(destination_lat / 2)**2 + math.cos(user_lat_rad) * math.cos(st_lat_rad) * math.sin(destination_lon / 2) ** 2
             a = min(1.0, max(0.0, a))
             c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
             distance = R * c
@@ -326,6 +334,7 @@ def fetch_second_legs(db: Session, end_ids: list[str], departure_time_limit: str
 
 def merge_routes(first_legs, second_legs, start_station_name, end_station_name, stop_id_to_name) -> list:
     second_leg_map = {}
+
     for t2_b_obj, t2_a_obj, tr2_obj in second_legs:
         board_name = stop_id_to_name.get(t2_b_obj.stop_id)
         if not board_name: continue
