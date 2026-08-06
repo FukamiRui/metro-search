@@ -20,9 +20,10 @@ __pycache__/
 postgres_data/
 
 # Data files
-data/
 *.zip
 
 
 # Generated files
-*.png
+*.png.DS_Store
+.DS_Store
+**/ .DS_Store
