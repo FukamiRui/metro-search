@@ -90,7 +90,7 @@ def load_cache_indexes(cache_data, start_station_name, end_station_name):
     trip_schedules = cache_data["trip_schedules"]
     trip_to_route = cache_data["trip_to_route"]
 
-    end_station_ids = set(stop_name_to_ids[end_station_name])
+    
 
     if start_station_name not in stop_name_to_ids:
         return None
@@ -98,7 +98,7 @@ def load_cache_indexes(cache_data, start_station_name, end_station_name):
     if end_station_name not in stop_name_to_ids:
         return None
     
-    
+    end_station_ids = set(stop_name_to_ids[end_station_name])
     
 
     return {
