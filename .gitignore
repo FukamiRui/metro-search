@@ -22,7 +22,7 @@ postgres_data/
 # Data files
 data/
 *.zip
-gtfs/*.txt
+
 
 # Generated files
 *.png
