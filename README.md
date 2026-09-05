@@ -9,8 +9,8 @@ A high-performance subway route search application using GTFS (General Transit F
 
 ## 🌐 Live Demo
 
-* **URL:** [https://metro-search.onrender.com/](https://metro-search.onrender.com/)
-> ⚠️ **Note:** Hosted on Render Free Tier. It may take 30–60 seconds for the initial cold start.
+* **URL:** [https://metro-search-portfolio.vercel.app/](https://metro-search-portfolio.vercel.app/)
+> Hosted on Vercel (Python serverless function).
 
 ---
 
