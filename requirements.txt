@@ -6,4 +6,5 @@ sqlalchemy
 psycopg2-binary
 pytest
 pandas
+httpx2
 psutil
