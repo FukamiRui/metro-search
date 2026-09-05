@@ -414,7 +414,7 @@
     <script>
         const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
             ? "http://localhost:8000" // For local
-            : "https://metro-search.onrender.com"; // For Deploy
+            : ""; // For Deploy: same-origin (frontend + API served from the same Vercel deployment)
 
 
         let currentSearchTime = "00:00:00";
