@@ -110,9 +110,8 @@ TOTAL    530     66    88%
 ├── .dockerignore
 └── requirements.txt
 
-```
 ---
-```
+
 ## 🏗️ Architecture
 
 <details>
@@ -172,37 +171,39 @@ TOTAL    530     66    88%
 </details>
 --- 
 
-##  🛠 Installation & Local Setup
-## 1. Clone the repository
-git clone [https://github.com/FukamiRui/metro-search.git](https://github.com/FukamiRui/metro-search.git)
-cd metro-search
+## 🛠 Installation & Local Setup
 
-##　2.　Create Environment Variables
+### 1. Clone the repository
+```bash
+git clone https://github.com/FukamiRui/metro-search.git
+cd metro-search
+```
+
+### 2. Create Environment Variables
 Create a .env file in the project root directory.
 You can copy the example configuration:
-
+```bash
 cp .env.example .env
+```
 
 Update the values in .env:
-
-## (Example script) env
-
-// PostgreSQL Configuration //
+```env
+# PostgreSQL Configuration
 POSTGRES_USER=your_user
 POSTGRES_PASSWORD=your_password
 POSTGRES_DB=mta_subway_db
 
-// SQLAlchemy Database URL //
+# SQLAlchemy Database URL
 DATABASE_URL=postgresql://your_user:your_password@db:5432/mta_subway_db
-
+```
 
 Note: Replace the placeholder values with your own local database credentials.
 Do not commit the .env file or expose database credentials publicly.
 
-
-## 3. Run the Application with Docker Compose
-
+### 3. Run the Application with Docker Compose
+```bash
 docker compose up --build
+```
 
 The API will be available at:
 http://localhost:8000
@@ -210,15 +211,12 @@ http://localhost:8000
 Swagger API documentation:
 http://localhost:8000/docs
 
-
-## 4. Run Tests
-```
+### 4. Run Tests
+```bash
 docker compose exec app pytest
 ```
 
-```
 ---
-```
 
 ## Trade-off
 I chose PostgreSQL over an in-memory data store.
@@ -239,9 +237,7 @@ Although an in-memory database can provide faster lookups after loading, it requ
 - Execution time: 0.79 s
 - Peak memory usage: 3.03 MB
 
-```
 ---
-```
 
 ## 🔮 Future Improvements
 GTFS-Realtime Integration: Fetch live delay and service disruption feeds via MTA APIs.
