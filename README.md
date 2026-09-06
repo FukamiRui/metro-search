@@ -79,36 +79,26 @@ TOTAL    530     66    88%
 ## 📂 Project Structure
 
 ```plaintext
-
 ├── .github/
 │   └── workflows/
-│       └── python-app.yml       # GitHub Actions CI Workflow
+│       └── python-app.yml  # GitHub Actions CI Workflow
 ├── data/
 │   └── gtfs/
 │       ├── routes.txt
 │       ├── stops.txt
 │       ├── trips.txt
 │       └── stop_times.txt
-│  
-├── models.py              # SQLAlchemy DB Models
-├── database.py            # Database Connection & Session Management
-│  
-├── main.py                     # FastAPI entry point (routes & cache initialization)
-│   ├── /search_route           # Direct & transfer route search API
-│   ├── /check_stations        # Nearest station lookup
-│   └── calculate_nearest_station
-│
-├── search.py                   # Core search algorithms
-│   ├── Direct Search          # Binary search over cached schedules & indexed SQL queries
-│   ├── Transfer Search         # Depth-bounded BFS
-│   └── Nearest Station         # Haversine distance calculation
-|
-├── test_api.py            # Pytest Test Cases
-├── .coveragerc            # Coverage Exclusions Configuration
+├── models.py               # SQLAlchemy DB Models
+├── database.py             # Database Connection & Session Management
+├── main.py                 # FastAPI entry point: /search_route, /check_stations, calculate_nearest_station
+├── search.py               # Core algorithms: direct search (binary search), transfer search (depth-bounded BFS), nearest station (Haversine)
+├── test_api.py             # Pytest Test Cases
+├── .coveragerc             # Coverage Exclusions Configuration
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .dockerignore
 └── requirements.txt
+```
 
 ---
 
