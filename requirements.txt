@@ -8,3 +8,4 @@ pytest
 pandas
 httpx2
 psutil
+psycopg[binary]
