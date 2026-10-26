@@ -2,11 +2,14 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
+import models
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
+
+models.Base.metadata.create_all(bind=engine)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 GTFS_DIR = os.path.join(BASE_DIR, "data", "gtfs")
