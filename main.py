@@ -6,15 +6,13 @@ from sqlalchemy.orm import Session
 import os
 from database import engine, get_db, SessionLocal
 import models
-from search import search_direct_db, search_transfer_db
+from search import search_direct_db, search_transfer_db, get_now, get_weekday
 from fastapi.responses import HTMLResponse
 import tracemalloc
 import time
 
 models.Base.metadata.create_all(bind=engine)
 
-from zoneinfo import ZoneInfo
-from datetime import datetime
 
 import psutil
 
@@ -310,9 +308,12 @@ async def get_all_stations(db: Session = Depends(get_db)):
         "sample_stations": spatial_list
     }
 
+
+
 @app.get("/current_time")
 def get_current_time():
-    now = datetime.now(ZoneInfo("America/New_York"))
-    return {"current_time": now.strftime("%H:%M:%S")}
+    return {"current_time": get_now().strftime("%H:%M:%S")}
 
-
+@app.get("/current_weekday")
+def get_current_weekday_route():
+    return {"current_weekday": get_weekday()}

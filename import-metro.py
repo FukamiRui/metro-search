@@ -96,5 +96,19 @@ if __name__ == "__main__":
             "stop_sequence"
         ]
     )
+    
+    import_csv_to_db(
+        file_name="calendar_dates.txt",
+        table_name="calendar_dates",
+        use_cols=None
+    )
+
+    import_csv_to_db(
+        file_name="calendar.txt",
+        table_name="calendars",
+        use_cols=None
+    )
+
+    
 
     print("=== ALL GTFS DATA IMPORTED SUCCESSFULLY ===")

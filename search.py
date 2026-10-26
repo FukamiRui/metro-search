@@ -1,13 +1,86 @@
 from collections import deque
 import math
 import bisect  
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, aliased
 import models
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 
 # Direct for [search_direct_db(), fetch_first_legs()]
 MAX_FIRST_LEGS=1000
 # Transfer for [fetch_second_legs()]
 SECOND_LEG_BATCH_SIZE = 5000
+
+
+class Calendar_search:
+    WEEKDAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+    WEEKEND_COLUMNS = ["saturday", "sunday"]
+
+    def __init__(self):
+        self.day = None
+        self.service_ids = set()
+
+    def get_day_condition(self, today):
+        if today.weekday() < 5:
+            column_names = self.WEEKDAY_COLUMNS
+        else:
+            column_names = self.WEEKEND_COLUMNS
+
+        conditions = []
+        for name in column_names:
+            conditions.append(getattr(models.Calendar, name) == 1)
+        return or_(*conditions) 
+
+    def active_service_ids(self, db, today):
+        if self.day == today:
+            return self.service_ids
+
+        todays_day = int(today.strftime("%Y%m%d"))
+
+        rows = (
+            db.query(models.Calendar.service_id)
+            .filter(
+                self.get_day_condition(today),
+                models.Calendar.start_date <= todays_day,
+                models.Calendar.end_date >= todays_day
+            )
+            .all()
+        )
+        exception_rows = (
+            db.query(models.CalendarDate.service_id,
+                     models.CalendarDate.exception_type
+                     )
+                     .filter(models.CalendarDate.date== todays_day)
+                     .all()
+        )
+    
+
+        service_ids = set()
+        for row in rows:
+            service_ids.add(row.service_id)
+
+        for row in exception_rows:
+            if row.exception_type == 1:
+                service_ids.add(row.service_id)
+            elif row.exception_type == 2:
+                service_ids.discard(row.service_id)
+
+        self.service_ids = service_ids
+        self.day = today
+        return self.service_ids
+
+calendar_search = Calendar_search()
+
+            
+
+
+def get_now():
+    return datetime.now(ZoneInfo("America/New_York"))
+
+def get_weekday():
+    return get_now().strftime("%a")
 
 def search_direct_cached(start_name: str, end_name: str, cache_data: dict, departure_time_limit: str = "00:00:00"):
     departure_time_limit = str(departure_time_limit).strip()
@@ -20,6 +93,8 @@ def search_direct_cached(start_name: str, end_name: str, cache_data: dict, depar
 
     start_ids = stop_name_to_ids.get(start_name, [])
     end_ids = set(stop_name_to_ids.get(end_name, []))
+
+  
 
     if not start_ids or not end_ids:
         return {"status": "Success", "next_trains": []}
@@ -230,6 +305,13 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
     if not start_ids or not end_ids:
         return {"status": "Success", "results": []}
 
+    today = get_now().date()
+    active_ids = list(
+        calendar_search.active_service_ids(db, today)
+    )
+    if not active_ids:
+        return {"status": "Success", "results": []}
+
     t_board = aliased(models.StopTime)
     t_alight = aliased(models.StopTime)
     trip = aliased(models.Trip)
@@ -242,7 +324,8 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
             t_board.stop_id.in_(start_ids),
             t_alight.stop_id.in_(end_ids),
             t_board.stop_sequence < t_alight.stop_sequence,
-            t_board.departure_time >= departure_time_limit
+            t_board.departure_time >= departure_time_limit,
+            trip.service_id.in_(active_ids),
         )
         .order_by(t_alight.arrival_time.asc())
         .limit(MAX_FIRST_LEGS)
@@ -282,15 +365,18 @@ def search_transfer_db(db: Session, start_station_name: str, end_station_name: s
 
     if not start_ids or not end_ids:
         return {"status": "Success", "results": []}
+
+    today = get_now().date()
+    active_ids = list(calendar_search.active_service_ids(db, today))
     
-    first_legs = fetch_first_legs(db, start_ids, departure_time_limit)
-    second_legs = fetch_second_legs(db, end_ids, departure_time_limit)
+    first_legs = fetch_first_legs(db, start_ids, departure_time_limit, active_ids)
+    second_legs = fetch_second_legs(db, end_ids, departure_time_limit, active_ids)
     raw_results = merge_routes(first_legs, second_legs, start_station_name, end_station_name, stop_id_to_name)
 
     return format_results(raw_results)
 
 
-def fetch_first_legs(db: Session, start_ids: list[str], departure_time_limit: str) -> list:
+def fetch_first_legs(db: Session, start_ids: list[str], departure_time_limit: str, active_ids: list) -> list:
     t1_b = aliased(models.StopTime)
     t1_a = aliased(models.StopTime)
     tr1 = aliased(models.Trip)
@@ -302,7 +388,8 @@ def fetch_first_legs(db: Session, start_ids: list[str], departure_time_limit: st
         .filter(
             t1_b.stop_id.in_(start_ids),
             t1_b.stop_sequence < t1_a.stop_sequence,
-            t1_b.departure_time >= departure_time_limit
+            t1_b.departure_time >= departure_time_limit,
+            tr1.service_id.in_(active_ids)
         )
         .order_by(t1_b.departure_time.asc())
         .limit(MAX_FIRST_LEGS)
@@ -311,7 +398,7 @@ def fetch_first_legs(db: Session, start_ids: list[str], departure_time_limit: st
     return first_legs
 
 
-def fetch_second_legs(db: Session, end_ids: list[str], departure_time_limit: str) -> list:
+def fetch_second_legs(db: Session, end_ids: list[str], departure_time_limit: str, active_ids: list) -> list:
     t2_b = aliased(models.StopTime)
     t2_a = aliased(models.StopTime)
     tr2 = aliased(models.Trip)
@@ -325,7 +412,8 @@ def fetch_second_legs(db: Session, end_ids: list[str], departure_time_limit: str
         .filter(
             t2_a.stop_id.in_(end_ids),
             t2_b.stop_sequence < t2_a.stop_sequence,
-            t2_b.departure_time >= departure_time_limit
+            t2_b.departure_time >= departure_time_limit,
+            tr2.service_id.in_(active_ids)
         )
         .order_by(t2_a.arrival_time.asc())
         .yield_per(SECOND_LEG_BATCH_SIZE)

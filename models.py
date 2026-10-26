@@ -37,7 +37,7 @@ class StopTime(Base):
 class Calendar(Base):
     __tablename__ = "calendars"
   
-    service_id = Column(String, primary_key=True, index=True)
+    service_id = Column(String, primary_key=True)
     monday = Column(Integer, nullable=False)
     tuesday = Column(Integer, nullable=False)
     wednesday = Column(Integer, nullable=False)
@@ -49,5 +49,13 @@ class Calendar(Base):
     end_date = Column(Integer, nullable=False)
 
 
+class CalendarDate(Base):
+    __tablename__ = "calendar_dates"
+
+    service_id = Column(String, primary_key=True)
+    date = Column(Integer, primary_key=True)
+    exception_type = Column(Integer, nullable=False)
+
+    
 
     
