@@ -31,7 +31,7 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://rui:password123@localhost:5432/mta_subway_db
+      DATABASE_URL: postgresql+psycopg2://rui:password123@localhost:5432/mta_subway_db
 
     steps:
       - name: Checkout repository
