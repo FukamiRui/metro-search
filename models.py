@@ -16,6 +16,15 @@ class Trip(Base):
     route_id = Column(String, ForeignKey("routes.route_id"), nullable=False, index=True)
     service_id = Column(String, index=True)
     trip_headsign = Column(String, nullable=True)
+    shape_id = Column(String, nullable=True, index=True)
+
+class Shape(Base):
+    __tablename__ = "shapes"
+
+    shape_id = Column(String, primary_key=True, index=True)
+    shape_pt_sequence = Column(Integer, primary_key=True)
+    shape_pt_lat = Column(String, nullable=False)
+    shape_pt_lon = Column(String, nullable=False)
 
 class Stop(Base):
     __tablename__ = "stops"
@@ -59,3 +68,15 @@ class CalendarDate(Base):
     
 
     
+
+
+class FeedInfo(Base):
+    __tablename__ = "feed_info"
+
+    feed_version = Column(String, primary_key=True)
+    feed_publisher_name = Column(String, nullable=True)
+    feed_publisher_url = Column(String, nullable=True)
+    feed_lang = Column(String, nullable=True)
+    feed_start_date = Column(String, nullable=True)
+    feed_end_date = Column(String, nullable=True)
+    feed_contact_url = Column(String, nullable=True)

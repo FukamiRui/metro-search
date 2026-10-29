@@ -164,7 +164,8 @@ async def get_index():
     file_path = os.path.join(os.path.dirname(__file__), "index.html")
     with open(file_path, "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
-    
+
+
 @app.get("/search_route")
 async def run_search_route(
     end_stop_name: str, 
@@ -203,6 +204,9 @@ async def run_search_route(
     transfer_res = search_transfer_db(db, start_stop_name, end_stop_name, PROJECT_CACHE, departure_time_limit)
     
     combined_trains = []
+    stop_coords = {}
+    for stop in db.query(models.Stop).all():
+        stop_coords[stop.stop_id] = [float(stop.stop_lat), float(stop.stop_lon)]
     
     # --- Format Direct Results ---
     direct_list = []
@@ -210,13 +214,17 @@ async def run_search_route(
         direct_list = direct_res.get("next_trains") or []
     
     for t in direct_list:
+        direct_route = str(t.get("route_id", "1")).strip()
+        leg_text = f"Route {direct_route} ({start_stop_name} {t.get('departure_time')} -> {end_stop_name} {t.get('arrival_time')})"
+        if user_lat and user_lon:
+            leg_text = f"[Walk to {start_stop_name}] -> " + leg_text
         combined_trains.append({
             "is_direct": True,
             "route_id": str(t.get("route_id", "1")).strip(),
             "trip_headsign": str(t.get("trip_headsign", f"To {end_stop_name}")).strip(),
             "departure_time": t.get("departure_time"),
             "arrival_time": t.get("arrival_time"),
-            "description": f"Direct Route (Started from nearest station: {start_stop_name})" if (user_lat and user_lon) else "Direct Route",
+            "description": leg_text,
             "fare": "$2.90",
             "transfer_count": 0
         })
@@ -248,17 +256,31 @@ async def run_search_route(
                     a_tm = str(p.get("arrival_time", "")).strip()
                     transfer_details.append(f"Route {r_id} ({b_st} {d_tm} -> {g_st} {a_tm})")
                 
+                legs = []
+                for p in path_data:
+                    legs.append({
+                        "trip_id": p.get("trip_id"),
+                        "route_id": str(p.get("route_id", "")).strip(),
+                        "board_station": str(p.get("board_station", "")).strip(),
+                        "departure_time": str(p.get("departure_time", "")).strip(),
+                        "getoff_station": str(p.get("getoff_station", "")).strip(),
+                        "arrival_time": str(p.get("arrival_time", "")).strip(),
+                        "board_point": stop_coords.get(p.get("board_stop_id")),
+                        "getoff_point": stop_coords.get(p.get("getoff_stop_id")),
+                    })
+
                 description_text = " -> ".join(transfer_details)
                 if user_lat and user_lon:
                     description_text = f"[Walk to {start_stop_name}] -> " + description_text
                 
                 combined_trains.append({
                     "is_direct": is_actually_direct,
+                    "legs": legs,
                     "route_id": " -> ".join(route_list),
                     "trip_headsign": f"To {end_stop_name}",
                     "departure_time": str(route_obj.get("real_departure_time")).strip(),
                     "arrival_time": str(route_obj.get("real_arrival_time")).strip(),
-                    "description": "Direct Route" if is_actually_direct else description_text,
+                    "description": description_text,
                     "fare": "$2.90",
                     "transfer_count": 0 if is_actually_direct else transfer_count
                 })
@@ -317,3 +339,69 @@ def get_current_time():
 @app.get("/current_weekday")
 def get_current_weekday_route():
     return {"current_weekday": get_weekday()}
+
+@app.get("/route_shapes/{route_id}")
+def get_route_shapes(route_id: str, db: Session = Depends(get_db)):
+    shape_ids = [row[0] for row in db.query(models.Trip.shape_id).filter(
+        models.Trip.route_id == route_id,
+        models.Trip.shape_id.isnot(None)
+    ).distinct().all()]
+    rows = db.query(models.Shape).filter(
+        models.Shape.shape_id.in_(shape_ids)
+    ).all()
+    rows.sort(key=lambda row: (row.shape_id, int(row.shape_pt_sequence)))
+
+    shapes = {}
+    for row in rows:
+        shapes.setdefault(row.shape_id, []).append([float(row.shape_pt_lat), float(row.shape_pt_lon)])
+    return shapes
+
+@app.get("/feed_info")
+def get_feed_info(db: Session = Depends(get_db)):
+    row = db.query(models.FeedInfo).first()
+    if row is None:
+        return {}
+    return {
+        "publisher": row.feed_publisher_name,
+        "version": row.feed_version,
+        "start_date": row.feed_start_date,
+        "end_date": row.feed_end_date,
+    }
+
+
+def nearest_point_index(points, lat, lon):
+    best_index = 0
+    best_dist = float("inf")
+    for i, (p_lat, p_lon) in enumerate(points):
+        d = (p_lat - lat) ** 2 + ((p_lon - lon) * math.cos(math.radians(lat))) ** 2
+        if d < best_dist:
+            best_dist = d
+            best_index = i
+    return best_index
+
+
+@app.get("/trip_shape")
+def get_trip_shape(
+    trip_id: str,
+    from_lat: float,
+    from_lon: float,
+    to_lat: float,
+    to_lon: float,
+    db: Session = Depends(get_db)
+):
+    trip = db.query(models.Trip).filter(models.Trip.trip_id == trip_id).first()
+    if trip is None or not trip.shape_id:
+        return {"points": []}
+
+    rows = db.query(models.Shape).filter(models.Shape.shape_id == trip.shape_id).all()
+    rows.sort(key=lambda row: int(row.shape_pt_sequence))
+    points = [[float(row.shape_pt_lat), float(row.shape_pt_lon)] for row in rows]
+    if not points:
+        return {"points": []}
+
+    start = nearest_point_index(points, from_lat, from_lon)
+    end = nearest_point_index(points, to_lat, to_lon)
+    if start >= end:
+        return {"points": []}
+
+    return {"points": points[start:end + 1]}

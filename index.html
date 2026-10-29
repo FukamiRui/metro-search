@@ -3,30 +3,49 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NYC Subway Searching Application</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 20px auto;
-            padding: 20px;
+            max-width: none;
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 0;
+            background: #e9eef5;
+            color: #000000;
         }
 
         .container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 360px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            box-sizing: border-box;
             display: flex;
+            flex-direction: column;
             gap: 20px;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
         }
 
         .form-side {
-            flex: 1.2;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
         }
 
         .map-side {
@@ -35,9 +54,12 @@
 
         #map {
             width: 100%;
-            height: 420px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            border: none;
+            z-index: 0;
         }
 
         .form-group {
@@ -57,18 +79,27 @@
             padding: 14px 16px;
             box-sizing: border-box;
             font-size: 16px;
-            border: 2px solid #ccc;
-            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            color: #000000;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(0, 0, 0, 0.5);
         }
 
         input[type="text"]:focus {
-            border-color: #007bff;
+            border-color: rgba(0, 0, 0, 0.4);
             outline: none;
         }
 
         .btn-flex {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             margin-top: 5px;
         }
 
@@ -78,18 +109,26 @@
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
-            border-radius: 6px;
+            border-radius: 14px;
         }
 
         .search-btn {
-            background-color: #001eff;
-            color: white;
-            flex: 2;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.12);
+            color: #000000;
+            flex: 1;
         }
 
         .gps-btn {
-            background-color: #00953e;
-            color: white;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.12);
+            color: #000000;
             flex: 1;
         }
 
@@ -107,17 +146,19 @@
             margin-top: 15px;
             padding: 15px;
             border: 1px solid #ddd;
-            background: #f9f9f9;
+            background: #ffffff;
+            color: #111111;
             display: none;
             border-radius: 8px;
         }
 
         /* Train Card Styles */
         .train-card {
-            border-left: 4px solid #222;
+            border-left: 4px solid transparent;
             padding: 12px;
             margin-bottom: 10px;
-            background: white;
+            background: rgba(255, 255, 255, 0.4);
+            color: #111111;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             cursor: pointer;
             border-radius: 0 4px 4px 0;
@@ -125,7 +166,7 @@
 
         .train-card.active {
             border-left-color: #007bff;
-            background: #fdfdfd;
+            background: rgba(255, 255, 255, 0.65);
         }
 
         .train-card.active .details {
@@ -137,7 +178,7 @@
             margin-top: 10px;
             font-size: 13px;
             color: #555;
-            background: #f0f0f0;
+            background: rgba(255, 255, 255, 0.3);
             padding: 8px;
             border-radius: 4px;
             line-height: 1.4;
@@ -171,6 +212,7 @@
             right: 0;
             top: 100%;
             background: white;
+            color: #333333;
             border: 1px solid #ccc;
             z-index: 9999;
             max-height: 200px;
@@ -228,7 +270,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #ffffff;
+            background: rgba(233, 238, 245, 0.35);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 10000;
             display: flex;
             flex-direction: column;
@@ -243,7 +287,10 @@
             border-top: 5px solid #007bff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.35);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
         }
 
         @keyframes spin {
@@ -257,27 +304,34 @@
         }
 
         .loading-box {
-            max-width: 450px;
-            text-align: center;
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 12px;
-            border: 1px solid #eee;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            width: 260px;
+            box-sizing: border-box;
+            text-align: left;
+            padding: 14px 16px;
+            color: #111111;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
         }
 
         .loading-title {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
             color: #111;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
         .status-steps {
             text-align: left;
-            margin: 15px 0;
-            font-size: 14px;
-            color: #555;
+            margin: 8px 0;
+            font-size: 12px;
+            color: #333;
         }
 
         .step {
@@ -301,13 +355,14 @@
         }
 
         .notice-text {
-            font-size: 12px;
-            color: #f35b5b;
-            background: #fff5f5;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #ffe3e3;
-            margin-top: 15px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #b03a3a;
+            background: rgba(255, 240, 240, 0.7);
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 180, 180, 0.6);
+            margin-top: 8px;
             font-style: italic;
         }
 
@@ -318,6 +373,7 @@
             gap: 12px;
             padding: 30px;
             background: #fff;
+            color: #111111;
             border: 1px dashed #007bff;
             border-radius: 8px;
         }
@@ -356,7 +412,7 @@
         <div class="spinner"></div>
         <div class="loading-box">
             <div class="loading-title">⚡ NYC Subway Engine Initializing...</div>
-            <div style="font-size: 13px; color: #666;">FastAPI backend is parsing and caching massive spatial data.
+            <div style="font-size: 11px; color: #555;">FastAPI backend is parsing and caching massive spatial data.
             </div>
 
             <div class="status-steps">
@@ -373,17 +429,242 @@
         </div>
     </div>
 
-    <h1 class="title">----------NYC Subway Route Finder-----------</h1>
     <style>
         .title{
             text-align: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            color: #111111;
+            margin: 0 0 4px;
         }
-     </style>
+
+         .map-hint {
+            font-weight: 400;
+            font-size: 12px;
+            color: #555;
+            margin: 0;
+            text-align: center;
+        }
+
+        .label-hint {
+            display: block;
+            font-weight: 400;
+            font-size: 12px;
+            color: #555;
+            margin-top: 2px;
+        }
+
+        .site-footer {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            max-width: 520px;
+            padding: 10px 14px;
+            font-size: 11px;
+            color: #333;
+            line-height: 1.5;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            z-index: 1000;
+        }
+
+        .site-footer p {
+            margin: 0;
+        }
+
+        #result {
+            position: fixed;
+            right: 20px;
+            bottom: 40px;
+            width: 320px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            scrollbar-width: none;
+            box-sizing: border-box;
+            margin-top: 0;
+            padding: 24px;
+            color: #111111;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+        }
+
+        #scheduleBox {
+            display: none;
+            position: fixed;
+            top: 110px;
+            right: 20px;
+            width: 320px;
+            max-height: calc(100vh - 130px);
+            overflow-y: auto;
+            box-sizing: border-box;
+            padding: 24px;
+            color: #111111;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+        }
+
+        #scheduleBox h3 {
+            margin: 12px 0 12px;
+        }
+
+        .schedule-steps {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .schedule-steps li {
+            margin-bottom: 8px;
+        }
+
+        .result-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .result-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .result-time {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            font-size: 15px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .result-meta {
+            font-size: 13px;
+            color: #555555;
+            margin-top: 2px;
+        }
+
+        .leg-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .leg {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .leg:last-child {
+            border-bottom: none;
+        }
+
+        .leg-badge {
+            flex: 0 0 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .leg-body {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .leg-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 2px 0;
+        }
+
+        .leg-time {
+            color: #555555;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .leg-walk {
+            font-size: 14px;
+            color: #555555;
+            padding: 8px 0;
+            margin: 0;
+        }
+
+        #result::-webkit-scrollbar {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                top: 96px;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                max-height: 46vh;
+            }
+
+            #result {
+                left: 12px;
+                right: 12px;
+                width: auto;
+                bottom: 120px;
+                max-height: 26vh;
+            }
+
+            #scheduleBox {
+                top: auto;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                bottom: 120px;
+                max-height: 26vh;
+            }
+
+            body.has-schedule #result {
+                display: none !important;
+            }
+
+            .site-footer {
+                top: auto;
+                bottom: 12px;
+                left: 12px;
+                right: 12px;
+                max-width: none;
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <div id="map"></div>
 
     <div class="container">
+        <h1 class="title">NYC Subway Route Finder</h1>
         <div class="form-side">
             <div class="form-group">
-                <label>Departure Station (Select OR use GPS clicking MAP ->)</label>
+                <label>Departure Station <span class="label-hint">Select, use GPS, or tap the map</span></label>
                 <input type="text" id="startStation" placeholder="Type a station name (e.g., Penn)..."
                     autocomplete="off">
                 <div id="startSuggest" class="suggest-box"></div>
@@ -401,15 +682,19 @@
             </div>
 
             <div id="locationStatus" style="font-size: 12px; color: #666; font-style: italic; margin-top: 5px;"></div>
+            <label class="map-hint">Tap map to set origin coordinate</label>
         </div>
 
-        <div class="map-side">
-            <label>Tap map to set origin coordinate</label>
-            <div id="map"></div>
-        </div>
     </div>
 
     <div id="result"></div>
+
+    <div id="scheduleBox"></div>
+
+    <footer class="site-footer">
+        <p id="feedInfoText">Subway schedule data from the MTA GTFS static feed.</p>
+        <p>This project is an independent portfolio project and is not affiliated with, sponsored by, or endorsed by the Metropolitan Transportation Authority.</p>
+    </footer>
 
     <script>
         const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
@@ -428,7 +713,8 @@
         let routeMarkers = [];
         let routePolyline = null;
 
-        const map = L.map('map').setView([40.7580, -73.9855], 13);
+        const map = L.map('map', { zoomControl: false }).setView([40.7580, -73.9855], 13);
+        L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
@@ -536,7 +822,10 @@
             }
         }
 
+        let lastResultsData = null;
+
         function renderResults(data) {
+            lastResultsData = data;
             const resultDiv = document.getElementById('result');
             resultDiv.style.display = "block";
 
@@ -557,7 +846,7 @@
             let html = `<h3>Search Results (Departure Board: ${data.origin_station || "As Input"})</h3>`;
             html += `<p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">Click a card below to expand timeline & plot route straight line on map.</p>`;
 
-            pageTrains.forEach((train) => {
+            pageTrains.forEach((train, index) => {
                 const tag = train.is_direct ? '<span class="direct-tag">Direct</span>' : '<span class="transfer-tag">Transfer</span>';
                 let transferText = "";
                 if (!train.is_direct && train.transfer_count > 0) {
@@ -568,11 +857,26 @@
                 const farePrice = train.fare || "$2.90";
                 const itineraryText = train.description || "Direct Route Path";
 
+                const badgeText = train.is_direct ? routeId : '⇄';
+                let badgeColor = routeColor(routeId);
+                if (!train.is_direct && train.legs && train.legs.length > 0) {
+                    const firstColor = routeColor(train.legs[0].route_id);
+                    const lastColor = routeColor(train.legs[train.legs.length - 1].route_id);
+                    badgeColor = `linear-gradient(135deg, ${firstColor}, ${lastColor})`;
+                } else if (!train.is_direct) {
+                    badgeColor = '#555555';
+                }
+                const lightBadge = train.is_direct && ['N', 'Q', 'R', 'W'].includes(routeId);
+                const destination = headsign.replace(/^To\s+/, '');
                 html += `
-                    <div class="train-card" onclick="handleCardClick(this, '${encodeURIComponent(itineraryText)}', ${train.is_direct}, '${encodeURIComponent(data.origin_station)}', '${encodeURIComponent(headsign)}')">
-                        <span style="float: right; color: #aaa;">▼</span>
-                        <strong>🕒 ${train.departure_time} ➡ ${train.arrival_time}</strong> ${tag}
-                        <br><span style="color:#000000; font-size:13px; font-weight: normal;">Route: ${routeId} (${headsign}) | Fare: <span style="font-weight: bold; color: #000000;">${farePrice}</span>${transferText}</span>
+                    <div class="train-card" data-index="${index}" onclick="handleCardClick(this, '${encodeURIComponent(itineraryText)}', ${train.is_direct}, '${encodeURIComponent(data.origin_station)}', '${encodeURIComponent(headsign)}')">
+                        <div class="result-row">
+                            <span class="leg-badge" style="background: ${badgeColor}; color: ${lightBadge ? '#000000' : '#ffffff'}">${badgeText}</span>
+                            <div class="result-body">
+                                <div class="result-time">${shortTime(train.departure_time)} ➡ ${shortTime(train.arrival_time)} ${tag}</div>
+                                <div class="result-meta">To ${destination} · Fare ${farePrice}${transferText}</div>
+                            </div>
+                        </div>
                         <div class="details">
                             <strong>🚶 Detailed Itinerary:</strong><br>${itineraryText.replace(/->/g, " ➡ ")}
                         </div>
@@ -613,56 +917,301 @@
         }
 
         function handleCardClick(cardElement, encodedItinerary, isDirect, encodedOrigin, encodedHeadsign) {
+            showSelectedCard(cardElement);
+            showSchedule(decodeURIComponent(encodedItinerary));
+            drawRouteOnMap(encodedItinerary, isDirect, encodedOrigin, encodedHeadsign);
+            const train = lastResultsData && lastResultsData.all_trains[Number(cardElement.dataset.index)];
+            if (train && train.legs) {
+                drawTripLegs(train.legs);
+            } else {
+                drawLegShapes(parseLegs(decodeURIComponent(encodedItinerary)));
+            }
+        }
 
-            document.querySelectorAll('.train-card').forEach(c => { if (c !== cardElement) c.classList.remove('active'); });
-            const isActive = cardElement.classList.toggle('active');
+        function showSelectedCard(cardElement) {
+            const selectedCard = cardElement.cloneNode(true);
+            selectedCard.removeAttribute('onclick');
+            selectedCard.classList.add('active');
+            const arrow = selectedCard.querySelector('span[style*="float: right"]');
+            if (arrow) arrow.remove();
+            const details = selectedCard.querySelector('.details');
+            if (details) details.remove();
 
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="nav-buttons"><button id="backBtn" class="nav-btn">⬅ Back to Results</button><div></div></div>`;
+            resultDiv.appendChild(selectedCard);
+            document.getElementById('backBtn').addEventListener('click', closeSchedule);
+        }
 
-            clearRouteVisuals();
+        function showSchedule(itinerary) {
+            const legs = parseLegs(itinerary);
+            const scheduleBox = document.getElementById('scheduleBox');
+            scheduleBox.innerHTML = `
+                <div class="nav-buttons"><button id="closeScheduleBtn" class="nav-btn">⬅ Back to Results</button><div></div></div>
+                <h3>Schedule</h3>
+                ${renderLegs(legs, itinerary)}`;
+            document.getElementById('closeScheduleBtn').addEventListener('click', closeSchedule);
+            scheduleBox.style.display = 'block';
+            document.body.classList.add('has-schedule');
+        }
 
+        function parseLegs(itinerary) {
+            const legs = [];
+            const walkMatch = itinerary.match(/\[Walk to ([^\]]+)\]/);
+            if (walkMatch) {
+                legs.push({ type: 'walk', to: walkMatch[1].trim() });
+            }
 
-            if (isActive) {
-                const itinerary = decodeURIComponent(encodedItinerary);
-                const originName = decodeURIComponent(encodedOrigin);
-                const headsign = decodeURIComponent(encodedHeadsign);
+            const regex = /Route\s(\S+)\s\((.*?)\s(\d{2}:\d{2}:\d{2})\s*->\s*(.*?)\s(\d{2}:\d{2}:\d{2})\)/g;
+            let match;
+            while ((match = regex.exec(itinerary)) !== null) {
+                legs.push({
+                    type: 'ride',
+                    route: match[1],
+                    from: match[2].trim(),
+                    departs: match[3],
+                    to: match[4].trim(),
+                    arrives: match[5]
+                });
+            }
+            return legs;
+        }
 
-                const orderedStations = parseStationsFromItinerary(itinerary, originName, isDirect, headsign);
+        function renderLegs(legs, itinerary) {
+            if (legs.length === 0) {
+                return `<p class="leg-walk">${itinerary.replace(/->/g, " ➡ ")}</p>`;
+            }
 
-                if (orderedStations.length > 0) {
-                    const startName = orderedStations[0];
-                    const endName = orderedStations[orderedStations.length - 1];
+            let html = `<ul class="leg-list">`;
+            legs.forEach(leg => {
+                if (leg.type === 'walk') {
+                    html += `<li class="leg-walk">🚶 Walk to ${leg.to}</li>`;
+                    return;
+                }
+                const lightText = ['N', 'Q', 'R', 'W'].includes(leg.route);
+                html += `
+                    <li class="leg">
+                        <span class="leg-badge" style="background: ${routeColor(leg.route)}; color: ${lightText ? '#000000' : '#ffffff'}">${leg.route}</span>
+                        <div class="leg-body">
+                            <div class="leg-line"><span>${leg.from}</span><span class="leg-time">${shortTime(leg.departs)}</span></div>
+                            <div class="leg-line"><span>${leg.to}</span><span class="leg-time">${shortTime(leg.arrives)}</span></div>
+                        </div>
+                    </li>`;
+            });
+            html += `</ul>`;
+            return html;
+        }
 
+        function shortTime(time) {
+            return time.slice(0, 5);
+        }
 
-                    [
-                        { name: startName, color: 'marker-green', label: 'Start' },
-                        { name: endName, color: 'marker-red', label: 'Dest' }
-                    ].forEach(point => {
-                        const found = allStationsData.find(s =>
-                            s.stop_name.toLowerCase().includes(point.name.toLowerCase()) ||
-                            point.name.toLowerCase().includes(s.stop_name.toLowerCase())
-                        );
+        const ROUTE_COLORS = {
+            '1': '#EE352E', '2': '#EE352E', '3': '#EE352E',
+            '4': '#00933C', '5': '#00933C', '6': '#00933C',
+            '7': '#B933AD',
+            'A': '#0039A6', 'C': '#0039A6', 'E': '#0039A6',
+            'B': '#FF6319', 'D': '#FF6319', 'F': '#FF6319', 'M': '#FF6319',
+            'N': '#FCCC0A', 'Q': '#FCCC0A', 'R': '#FCCC0A', 'W': '#FCCC0A',
+            'L': '#A7A9AC',
+            'G': '#6CBE45',
+            'J': '#996633', 'Z': '#996633',
+            'S': '#808183'
+        };
 
-                        if (found) {
-                            const marker = L.marker([found.stop_lat, found.stop_lon], {
-                                icon: createColorIcon(point.color)
-                            }).addTo(map).bindPopup(`<b>${point.label}: ${found.stop_name}</b>`);
+        function routeColor(route) {
+            return ROUTE_COLORS[route] || '#555555';
+        }
 
-                            routeMarkers.push(marker);
-                        }
-                    });
+        function findStationByName(name) {
+            const key = name.toLowerCase();
+            const exact = allStationsData.find(s => s.stop_name.toLowerCase() === key);
+            if (exact) return exact;
+            return allStationsData.find(s => s.stop_name.toLowerCase().includes(key) || key.includes(s.stop_name.toLowerCase()));
+        }
 
+        function nearestIndex(points, stop) {
+            const lat = Number(stop.stop_lat);
+            const lon = Number(stop.stop_lon);
+            let bestIndex = 0;
+            let bestDist = Infinity;
+            for (let i = 0; i < points.length; i++) {
+                const d = (points[i][0] - lat) ** 2 + (points[i][1] - lon) ** 2;
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestIndex = i;
+                }
+            }
+            return { index: bestIndex, dist: bestDist };
+        }
 
-                    const startNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(startName.toLowerCase()));
-                    const endNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(endName.toLowerCase()));
-                    if (startNode && endNode) {
-                        map.fitBounds([
-                            [startNode.stop_lat, startNode.stop_lon],
-                            [endNode.stop_lat, endNode.stop_lon]
-                        ], { padding: [50, 50] });
-                    }
+        function pointDistance(p, q) {
+            const lonScale = Math.cos(p[0] * Math.PI / 180);
+            return Math.hypot(p[0] - q[0], (p[1] - q[1]) * lonScale);
+        }
+
+        function pathLength(points) {
+            let total = 0;
+            for (let i = 1; i < points.length; i++) {
+                total += pointDistance(points[i - 1], points[i]);
+            }
+            return total;
+        }
+
+        function bestShapeSlice(shapes, fromStop, toStop) {
+            const fromPoint = [Number(fromStop.stop_lat), Number(fromStop.stop_lon)];
+            const toPoint = [Number(toStop.stop_lat), Number(toStop.stop_lon)];
+            const straight = pointDistance(fromPoint, toPoint);
+            if (straight === 0) return [];
+
+            let best = [];
+            let bestRatio = Infinity;
+            Object.values(shapes).forEach(points => {
+                const a = nearestIndex(points, fromStop);
+                const b = nearestIndex(points, toStop);
+                if (a.index >= b.index) return;
+                if (Math.sqrt(a.dist) > straight * 0.3 || Math.sqrt(b.dist) > straight * 0.3) return;
+
+                const slice = points.slice(a.index, b.index + 1);
+                const ratio = pathLength(slice) / straight;
+                if (ratio < bestRatio && ratio <= 1.8) {
+                    bestRatio = ratio;
+                    best = slice;
+                }
+            });
+            return best;
+        }
+
+        function stationPoint(name) {
+            const station = findStationByName(name);
+            if (!station) return null;
+            return [Number(station.stop_lat), Number(station.stop_lon)];
+        }
+
+        async function drawTripLegs(legs) {
+            const token = ++shapeDrawToken;
+            let previousEnd = null;
+
+            for (const leg of legs) {
+                if (!leg.trip_id) continue;
+
+                const fromPoint = leg.board_point || stationPoint(leg.board_station);
+                const toPoint = leg.getoff_point || stationPoint(leg.getoff_station);
+                if (!fromPoint || !toPoint) continue;
+
+                if (previousEnd) {
+                    const connector = L.polyline([previousEnd, fromPoint], { color: routeColor(leg.route_id), weight: 4, opacity: 0.75, lineCap: 'round' }).addTo(map);
+                    routeMarkers.push(connector);
+                }
+                previousEnd = toPoint;
+
+                const params = new URLSearchParams({
+                    trip_id: leg.trip_id,
+                    from_lat: fromPoint[0],
+                    from_lon: fromPoint[1],
+                    to_lat: toPoint[0],
+                    to_lon: toPoint[1]
+                });
+
+                let points = [];
+                try {
+                    const res = await fetch(`${API_BASE}/trip_shape?${params}`);
+                    const data = await res.json();
+                    points = data.points || [];
+                } catch (e) {
+                    points = [];
+                }
+                if (token !== shapeDrawToken) return;
+
+                if (points.length > 1) {
+                    const glow = L.polyline(points, { color: routeColor(leg.route_id), weight: 12, opacity: 0.35, lineCap: 'round' }).addTo(map);
+                    routeMarkers.push(glow);
+                    const line = L.polyline(points, { color: routeColor(leg.route_id), weight: 4, opacity: 1, lineCap: 'round' }).addTo(map);
+                    routeMarkers.push(line);
                 }
             }
         }
+
+        let shapeDrawToken = 0;
+        const routeShapeCache = {};
+
+        async function drawLegShapes(legs) {
+            const token = ++shapeDrawToken;
+            for (const leg of legs) {
+                if (leg.type !== 'ride') continue;
+
+                const fromStop = findStationByName(leg.from);
+                const toStop = findStationByName(leg.to);
+                if (!fromStop || !toStop) continue;
+
+                if (!routeShapeCache[leg.route]) {
+                    try {
+                        const res = await fetch(`${API_BASE}/route_shapes/${encodeURIComponent(leg.route)}`);
+                        routeShapeCache[leg.route] = await res.json();
+                    } catch (e) {
+                        routeShapeCache[leg.route] = {};
+                    }
+                }
+                if (token !== shapeDrawToken) return;
+
+                const points = bestShapeSlice(routeShapeCache[leg.route], fromStop, toStop);
+                if (points.length > 1) {
+                    const line = L.polyline(points, { color: routeColor(leg.route), weight: 4, opacity: 0.75, lineCap: 'round' }).addTo(map);
+                    routeMarkers.push(line);
+                }
+            }
+        }
+
+        function closeSchedule() {
+            clearRouteVisuals();
+            const scheduleBox = document.getElementById('scheduleBox');
+            scheduleBox.style.display = 'none';
+            scheduleBox.innerHTML = '';
+            document.body.classList.remove('has-schedule');
+            renderResults(lastResultsData);
+        }
+
+        function drawRouteOnMap(encodedItinerary, isDirect, encodedOrigin, encodedHeadsign) {
+            clearRouteVisuals();
+
+            const itinerary = decodeURIComponent(encodedItinerary);
+            const originName = decodeURIComponent(encodedOrigin);
+            const headsign = decodeURIComponent(encodedHeadsign);
+            const orderedStations = parseStationsFromItinerary(itinerary, originName, isDirect, headsign);
+
+            if (orderedStations.length > 0) {
+                const startName = orderedStations[0];
+                const endName = orderedStations[orderedStations.length - 1];
+
+                [
+                    { name: startName, color: 'marker-green', label: 'Start' },
+                    { name: endName, color: 'marker-red', label: 'Dest' }
+                ].forEach(point => {
+                    const found = allStationsData.find(s =>
+                        s.stop_name.toLowerCase().includes(point.name.toLowerCase()) ||
+                        point.name.toLowerCase().includes(s.stop_name.toLowerCase())
+                    );
+
+                    if (found) {
+                        const marker = L.marker([found.stop_lat, found.stop_lon], {
+                            icon: createColorIcon(point.color)
+                        }).addTo(map).bindPopup(`<b>${point.label}: ${found.stop_name}</b>`);
+
+                        routeMarkers.push(marker);
+                    }
+                });
+
+                const startNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(startName.toLowerCase()));
+                const endNode = allStationsData.find(s => s.stop_name.toLowerCase().includes(endName.toLowerCase()));
+                if (startNode && endNode) {
+                    map.fitBounds([
+                        [startNode.stop_lat, startNode.stop_lon],
+                        [endNode.stop_lat, endNode.stop_lon]
+                    ], { padding: [50, 50] });
+                }
+            }
+        }
+
         function clearRouteVisuals() {
             routeMarkers.forEach(m => map.removeLayer(m));
             routeMarkers = [];
@@ -782,6 +1331,24 @@
 
         setupSuggest('startStation', 'startSuggest');
         setupSuggest('endStation', 'endSuggest');
+
+        async function loadFeedInfo() {
+            try {
+                const res = await fetch(`${API_BASE}/feed_info`);
+                const info = await res.json();
+                if (!info.end_date) return;
+
+                const end = info.end_date;
+                const endDate = new Date(Number(end.slice(0, 4)), Number(end.slice(4, 6)) - 1, Number(end.slice(6, 8)));
+                const endText = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                document.getElementById('feedInfoText').textContent =
+                    `Subway schedule data from the MTA GTFS feed, version ${info.version}, valid through ${endText}.`;
+            } catch (e) {
+                // Keep the default footer text if the feed info cannot be loaded.
+            }
+        }
+
+        loadFeedInfo();
     </script>
 </body>
 
