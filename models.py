@@ -80,3 +80,34 @@ class FeedInfo(Base):
     feed_start_date = Column(String, nullable=True)
     feed_end_date = Column(String, nullable=True)
     feed_contact_url = Column(String, nullable=True)
+
+
+class ServiceAlert(Base):
+    __tablename__ = "service_alerts"
+
+    alert_id = Column(String, primary_key=True)
+    alert_type = Column(String, nullable=True)
+    header = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    routes = Column(String, nullable=False)
+    stops = Column(String, nullable=False)
+    start_time = Column(Integer, nullable=True)
+    end_time = Column(Integer, nullable=True)
+
+
+class FeedRefresh(Base):
+    __tablename__ = "feed_refresh"
+
+    feed_name = Column(String, primary_key=True)
+    refreshed_at = Column(Integer, nullable=False)
+
+
+class VehiclePosition(Base):
+    __tablename__ = "vehicle_positions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    trip_id = Column(String, nullable=True)
+    route_id = Column(String, nullable=True, index=True)
+    stop_id = Column(String, nullable=True)
+    status = Column(String, nullable=True)
+    timestamp = Column(Integer, nullable=True)

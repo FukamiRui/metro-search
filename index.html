@@ -404,6 +404,10 @@
 
         /* Destination */
     </style>
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
 </head>
 
 <body>
@@ -481,7 +485,7 @@
             position: fixed;
             right: 20px;
             bottom: 40px;
-            width: 320px;
+            width: 420px;
             max-height: calc(100vh - 120px);
             overflow-y: auto;
             scrollbar-width: none;
@@ -558,6 +562,104 @@
             font-size: 13px;
             color: #555555;
             margin-top: 2px;
+        }
+
+        .live-status {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #0a7a3a;
+            margin-top: 4px;
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #28a745;
+            display: inline-block;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .timeline-strip {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .timeline-stop {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.45);
+            color: #111111;
+            font-size: 11px;
+            font-weight: 400;
+        }
+
+        .timeline-stop.passed {
+            opacity: 0.5;
+        }
+
+        .timeline-stop.current {
+            background: var(--line);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .timeline-name {
+            display: block;
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .timeline-time {
+            display: block;
+            flex: 0 0 auto;
+            opacity: 0.8;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .live-train {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .live-bullet {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .live-station {
+            background: rgba(255, 255, 255, 0.92);
+            color: #111111;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .live-dot.off {
+            background: #999999;
         }
 
         .leg-list {
@@ -875,6 +977,7 @@
                             <div class="result-body">
                                 <div class="result-time">${shortTime(train.departure_time)} ➡ ${shortTime(train.arrival_time)} ${tag}</div>
                                 <div class="result-meta">To ${destination} · Fare ${farePrice}${transferText}</div>
+                                <div class="live-status" id="live-${index}"></div>
                             </div>
                         </div>
                         <div class="details">
@@ -895,8 +998,67 @@
 
             resultDiv.innerHTML = html;
             setupNavEvents();
+            loadLiveStatus(pageTrains);
         }
 
+        async function loadLiveStatus(trains) {
+            let vehicles = [];
+            try {
+                const res = await fetch(`${API_BASE}/live/vehicles`);
+                const data = await res.json();
+                vehicles = data.vehicles || [];
+            } catch (e) {
+                return;
+            }
+
+            for (let index = 0; index < trains.length; index++) {
+                const train = trains[index];
+                const el = document.getElementById(`live-${index}`);
+                if (!el || !train.legs || train.legs.length === 0) continue;
+
+                const leg0 = train.legs[0];
+                const legTrip = leg0.trip_id || "";
+                let match = null;
+                for (const vehicle of vehicles) {
+                    if (vehicle.trip_id && legTrip.endsWith(vehicle.trip_id)) {
+                        match = vehicle;
+                        break;
+                    }
+                }
+
+                if (!match) {
+                    el.innerHTML = `<span class="live-dot off"></span>No live position`;
+                    continue;
+                }
+
+                try {
+                    const params = new URLSearchParams({
+                        trip_id: leg0.trip_id,
+                        stop_id: match.stop_id,
+                        board_stop_id: leg0.board_stop_id || ""
+                    });
+                    const res = await fetch(`${API_BASE}/live/timeline?${params}`);
+                    const data = await res.json();
+                    el.innerHTML = `<span class="live-dot"></span>Live now` + renderTimeline(data.stops || [], routeColor(match.route));
+                } catch (e) {
+                    el.innerHTML = `<span class="live-dot off"></span>No live position`;
+                }
+            }
+        }
+
+        function renderTimeline(stops, color) {
+            if (stops.length === 0) return "";
+            let html = `<div class="timeline-strip">`;
+            stops.forEach(stop => {
+                html += `
+                    <div class="timeline-stop ${stop.state}" style="--line: ${color}">
+                        <span class="timeline-name">${stop.name}</span>
+                        <span class="timeline-time">${shortTime(stop.time)}</span>
+                    </div>`;
+            });
+            html += `</div>`;
+            return html;
+        }
 
         function parseStationsFromItinerary(itinerary, originName, isDirect, headsign) {
             let stations = [];
@@ -919,13 +1081,37 @@
         function handleCardClick(cardElement, encodedItinerary, isDirect, encodedOrigin, encodedHeadsign) {
             showSelectedCard(cardElement);
             showSchedule(decodeURIComponent(encodedItinerary));
-            drawRouteOnMap(encodedItinerary, isDirect, encodedOrigin, encodedHeadsign);
+
+            if (clickMarker) {
+                map.removeLayer(clickMarker);
+                clickMarker = null;
+            }
+            clearRouteVisuals();
+
             const train = lastResultsData && lastResultsData.all_trains[Number(cardElement.dataset.index)];
-            if (train && train.legs) {
+            if (train && train.legs && train.legs.length > 0) {
+                drawEndpointPins(train.legs);
                 drawTripLegs(train.legs);
+                drawLiveTrains(train.legs);
             } else {
+                drawRouteOnMap(encodedItinerary, isDirect, encodedOrigin, encodedHeadsign);
                 drawLegShapes(parseLegs(decodeURIComponent(encodedItinerary)));
             }
+        }
+
+        function drawEndpointPins(legs) {
+            const first = legs[0];
+            const last = legs[legs.length - 1];
+            if (!first.board_point || !last.getoff_point) return;
+
+            const startMarker = L.marker(first.board_point, { icon: createColorIcon('marker-green') })
+                .addTo(map)
+                .bindPopup(`<b>Start: ${first.board_station}</b>`);
+            const endMarker = L.marker(last.getoff_point, { icon: createColorIcon('marker-red') })
+                .addTo(map)
+                .bindPopup(`<b>Dest: ${last.getoff_station}</b>`);
+            routeMarkers.push(startMarker, endMarker);
+            map.fitBounds([first.board_point, last.getoff_point], { padding: [50, 50] });
         }
 
         function showSelectedCard(cardElement) {
@@ -944,15 +1130,10 @@
         }
 
         function showSchedule(itinerary) {
-            const legs = parseLegs(itinerary);
             const scheduleBox = document.getElementById('scheduleBox');
-            scheduleBox.innerHTML = `
-                <div class="nav-buttons"><button id="closeScheduleBtn" class="nav-btn">⬅ Back to Results</button><div></div></div>
-                <h3>Schedule</h3>
-                ${renderLegs(legs, itinerary)}`;
-            document.getElementById('closeScheduleBtn').addEventListener('click', closeSchedule);
-            scheduleBox.style.display = 'block';
-            document.body.classList.add('has-schedule');
+            scheduleBox.style.display = 'none';
+            scheduleBox.innerHTML = '';
+            document.body.classList.remove('has-schedule');
         }
 
         function parseLegs(itinerary) {
@@ -1003,6 +1184,10 @@
         }
 
         function shortTime(time) {
+            const hours = Number(time.slice(0, 2));
+            if (hours >= 24) {
+                return `${String(hours - 24).padStart(2, '0')}${time.slice(2, 5)}`;
+            }
             return time.slice(0, 5);
         }
 
@@ -1080,6 +1265,44 @@
                 }
             });
             return best;
+        }
+
+        async function drawLiveTrains(legs) {
+            const token = shapeDrawToken;
+            let vehicles = [];
+            try {
+                const res = await fetch(`${API_BASE}/live/vehicles`);
+                const data = await res.json();
+                vehicles = data.vehicles || [];
+            } catch (e) {
+                return;
+            }
+            if (token !== shapeDrawToken) return;
+
+            for (const leg of legs) {
+                if (!leg.trip_id) continue;
+
+                let match = null;
+                for (const vehicle of vehicles) {
+                    if (vehicle.trip_id && leg.trip_id.endsWith(vehicle.trip_id)) {
+                        match = vehicle;
+                        break;
+                    }
+                }
+                if (!match || match.lat === null) continue;
+
+                const lightText = ['N', 'Q', 'R', 'W'].includes(match.route);
+                const icon = L.divIcon({
+                    className: 'live-train-icon',
+                    html: `<div class="live-train">
+                        <span class="live-bullet" style="background: ${routeColor(match.route)}; color: ${lightText ? '#000000' : '#ffffff'}">${match.route}</span>
+                        <span class="live-station">${match.stop_name}</span>
+                    </div>`,
+                    iconSize: null
+                });
+                const marker = L.marker([match.lat, match.lon], { icon: icon }).addTo(map);
+                routeMarkers.push(marker);
+            }
         }
 
         function stationPoint(name) {

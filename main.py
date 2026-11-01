@@ -8,6 +8,8 @@ from database import engine, get_db, SessionLocal
 import models
 from search import search_direct_db, search_transfer_db, get_now, get_weekday
 from fastapi.responses import HTMLResponse
+import live_alerts
+import live_vehicles
 import tracemalloc
 import time
 
@@ -265,6 +267,7 @@ async def run_search_route(
                         "departure_time": str(p.get("departure_time", "")).strip(),
                         "getoff_station": str(p.get("getoff_station", "")).strip(),
                         "arrival_time": str(p.get("arrival_time", "")).strip(),
+                        "board_stop_id": p.get("board_stop_id"),
                         "board_point": stop_coords.get(p.get("board_stop_id")),
                         "getoff_point": stop_coords.get(p.get("getoff_stop_id")),
                     })
@@ -405,3 +408,78 @@ def get_trip_shape(
         return {"points": []}
 
     return {"points": points[start:end + 1]}
+
+
+@app.get("/live/alerts")
+def get_live_alerts(route: str = None, db: Session = Depends(get_db)):
+    alerts = live_alerts.load_alerts(db)
+    if route:
+        filtered = []
+        for alert in alerts:
+            if route in alert["routes"]:
+                filtered.append(alert)
+        alerts = filtered
+    return {"alerts": alerts}
+
+
+@app.get("/live/vehicles")
+def get_live_vehicles(route: str = None, db: Session = Depends(get_db)):
+    vehicles = live_vehicles.load_vehicles(db)
+    if route:
+        filtered = []
+        for vehicle in vehicles:
+            if vehicle["route"] == route:
+                filtered.append(vehicle)
+        vehicles = filtered
+    return {"vehicles": vehicles}
+
+
+@app.get("/live/timeline")
+def get_live_timeline(trip_id: str, stop_id: str, board_stop_id: str = None, db: Session = Depends(get_db)):
+    static_trip = db.query(models.Trip).filter(models.Trip.trip_id == trip_id).first()
+    if static_trip is None:
+        return {"stops": []}
+
+    stop_rows = db.query(models.StopTime).filter(
+        models.StopTime.trip_id == static_trip.trip_id
+    ).order_by(models.StopTime.stop_sequence).all()
+
+    stop_names = {}
+    for stop in db.query(models.Stop).all():
+        stop_names[stop.stop_id] = stop.stop_name
+
+    current_index = None
+    for i, row in enumerate(stop_rows):
+        if row.stop_id == stop_id:
+            current_index = i
+            break
+    if current_index is None:
+        return {"stops": []}
+
+    board_index = None
+    for i, row in enumerate(stop_rows):
+        if board_stop_id and row.stop_id == board_stop_id:
+            board_index = i
+            break
+
+    start = max(0, current_index - 3)
+    if board_index is not None and start < board_index <= current_index:
+        start = board_index
+    end = min(len(stop_rows), current_index + 2)
+
+    stops = []
+    for i in range(start, end):
+        row = stop_rows[i]
+        if i < current_index:
+            state = "passed"
+        elif i == current_index:
+            state = "current"
+        else:
+            state = "next"
+        stops.append({
+            "stop_id": row.stop_id,
+            "name": stop_names.get(row.stop_id, row.stop_id),
+            "time": row.departure_time,
+            "state": state,
+        })
+    return {"stops": stops}
