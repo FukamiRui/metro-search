@@ -18,7 +18,7 @@ print(f"DEBUG: The URL is -> {DATABASE_URL}")
 print(f"DEBUG: GTFS directory -> {GTFS_DIR}")
 
 
-def import_csv_to_db(file_name, table_name, use_cols):
+def import_csv_to_db(file_name, table_name, use_cols, if_exists="append"):
     """
     Reads a GTFS CSV (TXT) file efficiently using Pandas
     and bulk-inserts the data into the PostgreSQL database.
@@ -42,7 +42,7 @@ def import_csv_to_db(file_name, table_name, use_cols):
         df.to_sql(
             table_name,
             con=engine,
-            if_exists="append",
+            if_exists=if_exists,
             index=False
         )
 
@@ -84,7 +84,8 @@ if __name__ == "__main__":
             "trip_id",
             "route_id",
             "service_id",
-            "trip_headsign"
+            "trip_headsign",
+            "shape_id"
         ]
     )
 
@@ -113,5 +114,19 @@ if __name__ == "__main__":
     )
 
     
+
+    import_csv_to_db(
+        file_name="shapes.txt",
+        table_name="shapes",
+        use_cols=None,
+        if_exists="replace"
+    )
+
+    import_csv_to_db(
+        file_name="feed_info.txt",
+        table_name="feed_info",
+        use_cols=None,
+        if_exists="replace"
+    )
 
     print("=== ALL GTFS DATA IMPORTED SUCCESSFULLY ===")

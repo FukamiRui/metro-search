@@ -16,6 +16,15 @@ class Trip(Base):
     route_id = Column(String, ForeignKey("routes.route_id"), nullable=False, index=True)
     service_id = Column(String, index=True)
     trip_headsign = Column(String, nullable=True)
+    shape_id = Column(String, nullable=True, index=True)
+
+class Shape(Base):
+    __tablename__ = "shapes"
+
+    shape_id = Column(String, primary_key=True, index=True)
+    shape_pt_sequence = Column(Integer, primary_key=True)
+    shape_pt_lat = Column(String, nullable=False)
+    shape_pt_lon = Column(String, nullable=False)
 
 class Stop(Base):
     __tablename__ = "stops"
@@ -59,3 +68,46 @@ class CalendarDate(Base):
     
 
     
+
+
+class FeedInfo(Base):
+    __tablename__ = "feed_info"
+
+    feed_version = Column(String, primary_key=True)
+    feed_publisher_name = Column(String, nullable=True)
+    feed_publisher_url = Column(String, nullable=True)
+    feed_lang = Column(String, nullable=True)
+    feed_start_date = Column(String, nullable=True)
+    feed_end_date = Column(String, nullable=True)
+    feed_contact_url = Column(String, nullable=True)
+
+
+class ServiceAlert(Base):
+    __tablename__ = "service_alerts"
+
+    alert_id = Column(String, primary_key=True)
+    alert_type = Column(String, nullable=True)
+    header = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    routes = Column(String, nullable=False)
+    stops = Column(String, nullable=False)
+    start_time = Column(Integer, nullable=True)
+    end_time = Column(Integer, nullable=True)
+
+
+class FeedRefresh(Base):
+    __tablename__ = "feed_refresh"
+
+    feed_name = Column(String, primary_key=True)
+    refreshed_at = Column(Integer, nullable=False)
+
+
+class VehiclePosition(Base):
+    __tablename__ = "vehicle_positions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    trip_id = Column(String, nullable=True)
+    route_id = Column(String, nullable=True, index=True)
+    stop_id = Column(String, nullable=True)
+    status = Column(String, nullable=True)
+    timestamp = Column(Integer, nullable=True)

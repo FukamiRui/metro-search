@@ -336,6 +336,9 @@ def search_direct_db(db: Session, start_station_name: str, end_station_name: str
     for t_b, t_a, tr in query_results:
         path = [{
             "route_id": tr.route_id,
+            "trip_id": t_b.trip_id,
+            "board_stop_id": t_b.stop_id,
+            "getoff_stop_id": t_a.stop_id,
             "board_station": start_station_name,
             "getoff_station": end_station_name,
             "departure_time": t_b.departure_time,
@@ -441,6 +444,9 @@ def merge_routes(first_legs, second_legs, start_station_name, end_station_name, 
                     path = [
                         {
                             "route_id": tr1_obj.route_id,
+                            "trip_id": t1_b_obj.trip_id,
+                            "board_stop_id": t1_b_obj.stop_id,
+                            "getoff_stop_id": t1_a_obj.stop_id,
                             "board_station": start_station_name,
                             "getoff_station": transfer_name,
                             "departure_time": t1_b_obj.departure_time,
@@ -448,6 +454,9 @@ def merge_routes(first_legs, second_legs, start_station_name, end_station_name, 
                         },
                         {
                             "route_id": tr2_obj.route_id,
+                            "trip_id": t2_b_obj.trip_id,
+                            "board_stop_id": t2_b_obj.stop_id,
+                            "getoff_stop_id": t2_a_obj.stop_id,
                             "board_station": transfer_name,
                             "getoff_station": end_station_name,
                             "departure_time": t2_b_obj.departure_time,
